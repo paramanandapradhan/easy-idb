@@ -3,7 +3,7 @@ A simple light weight library to store data in browser Indexed DB. It provides s
 
 # Install
 ```
-npm install @cloudparaker/easy-idb
+npm i @cloudparker/easy-idb --save
 ```
 
 

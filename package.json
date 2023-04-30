@@ -1,6 +1,13 @@
 {
 	"name": "@cloudparker/easy-idb",
-	"version": "0.0.1",
+	"version": "0.0.4",
+	"author": "cloudparker.com",
+	"license": "MIT",
+	"keywords": [
+		"indexedDB",
+		"js"
+	],
+	"description": "A lightweight, promise-based JavaScript library for working with IndexedDB, providing simplicity and ease of use.",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run package",
