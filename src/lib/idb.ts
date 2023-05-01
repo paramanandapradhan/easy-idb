@@ -24,23 +24,29 @@ import type {
  */
 export function openDatabase({ name, version = 1, onUpgrade }: OpenDbArgs): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open(name, version);
+        const req: IDBOpenDBRequest = indexedDB.open(name, version);
         req.onsuccess = () => {
+            console.log('Db open success!')
             resolve(req.result);
         };
         req.onerror = () => {
             reject(`Unable to open indexed db : ` + req.error);
         };
-        req.onupgradeneeded = (ev: IDBVersionChangeEvent) => {
+        req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+            console.log('db onupgradeneeded')
             let db = req.result;
-            const oldVersion: number = ev.oldVersion;
-            const newVersion: number = ev.newVersion || 1;
+            const oldVersion: number = event.oldVersion;
+            const newVersion: number = event.newVersion || 1;
+            const transaction: IDBTransaction = (event.target as IDBOpenDBRequest).transaction!
             if (onUpgrade) {
                 for (let version = oldVersion; version < newVersion; version++) {
-                    onUpgrade({ db, oldVersion: version, newVersion: version + 1 });
+                    onUpgrade({ db, oldVersion: version, newVersion: version + 1, transaction });
                 }
             }
         };
+        req.onblocked = (event: IDBVersionChangeEvent) => {
+            console.log('db onblocked')
+        }
     });
 }
 
@@ -151,7 +157,7 @@ export function get<T>({ db, storeName, indexName, value, valueStart, valueStart
     });
 }
 
-export function getAll<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count = Math.pow(2, 32) }: GetAllArgs): Promise<T> {
+export function getAll<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count = Math.pow(2, 32) }: GetAllArgs): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
         const store = getStore({ db, storeName });
@@ -195,7 +201,7 @@ export function insert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
     });
 }
 
-export function insetMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promise<T[]> {
+export function insertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);

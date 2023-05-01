@@ -1,6 +1,6 @@
-import { find, insetMany, openDatabase, removeDatabase, removeStore } from "./idb";
+import { createStore, find, insertMany, openDatabase, removeDatabase, removeStore } from "./idb";
 import { Store } from "./store";
-import type { DatabaseConstructorArgs, RestoreDataArgs, StoreArgs, onUpgradeFn } from "./types";
+import type { DatabaseConstructorArgs, RestoreDataArgs, StoreArgs, StoreIndexArgs, onUpgradeFn } from "./types";
 
 export class Database {
     readonly name: string;
@@ -12,6 +12,7 @@ export class Database {
     private db: IDBDatabase | null = null;
     private isReadyResolve: Function = () => { };
     private isReadyReject: Function = () => { };
+    private isSchemaReady: boolean = false;
 
 
     constructor({ name, version, stores }: DatabaseConstructorArgs) {
@@ -24,28 +25,66 @@ export class Database {
         })
     }
 
-    async openDatabase(onUpgrade?: onUpgradeFn) {
+    async openDatabase(onUpgrade?: onUpgradeFn): Promise<{ [key: string]: Store, }> {
         try {
             this.db = await openDatabase({
                 name: this.name, version: this.version,
-                onUpgrade: ({ db, oldVersion, newVersion }) => {
-                    if (newVersion === 1) {
-                        this.stores.forEach((item: StoreArgs) => {
-                            let store = new Store({ db, name: item.name, primaryKey: item.primaryKey, autoIncrement: item.autoIncrement, indexes: item.indexes });
+                onUpgrade: ({ db, oldVersion, newVersion, transaction }) => {
+                    if (!this.isSchemaReady) {
+                        this.isSchemaReady = true;
 
-                            this.storesMap[item.name] = store;
-                        })
+                        this.stores.forEach((item: StoreArgs) => {
+                            let store: IDBObjectStore;
+                            if (!db.objectStoreNames.contains(item.name)) {
+                                store = createStore({ db, storeName: item.name, primaryKey: item.primaryKey, autoIncrement: item.autoIncrement });
+                            } else {
+                                store = transaction.objectStore(item.name)
+                            }
+
+                            let indexes = (item.indexes || []).map((index: string | StoreIndexArgs) => {
+                                if (typeof index == 'string') {
+                                    return { name: index } as StoreIndexArgs
+                                }
+                                return index as StoreIndexArgs;
+                            })
+
+                            // Remove indexes
+                            let indexSet: Set<string> = new Set(indexes.map((index: StoreIndexArgs) => index.name));
+                            const indexNames = store.indexNames || [];
+                            for (let i = 0; i < indexNames.length; i++) {
+                                let indexName = indexNames[i];
+                                if (indexName && indexName != item.primaryKey) {
+                                    if (!indexSet.has(indexName)) {
+                                        store.deleteIndex(indexName);
+                                    }
+                                }
+                            }
+
+                            // Create indexes 
+                            indexes.forEach((index) => {
+                                if (!store.indexNames.contains(index.name)) {
+                                    store.createIndex(index.name, index.name, { unique: index.unique, multiEntry: index.multiEntry })
+                                }
+                            });
+                        });
                     }
                     if (onUpgrade) {
-                        onUpgrade({ db, oldVersion, newVersion })
+                        onUpgrade({ db, oldVersion, newVersion, transaction });
                     }
                 }
             });
             this.isReadyResolve(this.db);
-            return this.db;
         } catch (error) {
             this.isReadyReject(error);
         }
+
+        if (this.db) {
+            this.stores.forEach((item: StoreArgs) => {
+                this.storesMap[item.name] = new Store({ db: this.db!, name: item.name });
+            });
+        }
+
+        return { ...this.storesMap };
     }
 
     deleteDatabse() {
@@ -81,9 +120,13 @@ export class Database {
     async restore(data: RestoreDataArgs): Promise<void> {
         if (this.db && data && data.version && data.name && data.stores) {
             await Promise.all(data.stores.map(async (store) => {
-                await insetMany({ db: this.db!, storeName: store.name, docs: store.docs })
+                await insertMany({ db: this.db!, storeName: store.name, docs: store.docs })
             }));
         }
+    }
+
+    close() {
+        this.db?.close()
     }
 
 }

@@ -1,1 +1,89 @@
-Welcome to easy-idb databse library.
+<script lang="ts">
+	import { browser } from '$app/environment';
+	import { Database, Store } from '$lib';
+	import type { StoreArgs } from '$lib/types';
+	import { onMount } from 'svelte';
+
+	let todo: any;
+	let items: any[] = [];
+	let task = '';
+	let db: Database | null = null;
+	let version = 7;
+	let stores: StoreArgs[] = [
+		{ name: 'todos', primaryKey: '_id', autoIncrement: true },
+		{ name: 'users', primaryKey: '_id', autoIncrement: true, indexes: ['updatedAt'] }
+	];
+
+	let todos: Store;
+
+	async function handleOpenDb() {
+		db = new Database({ name: 'easy-idb-test-db', version, stores });
+		let results = await db.openDatabase(({ db, oldVersion, newVersion }) => {
+			console.log({ db, oldVersion, newVersion });
+		});
+		console.log('Db opened');
+		todos = results.todos;
+		console.log(results);
+	}
+
+	function handleSave() {
+		task = (task || '').trim();
+		if (task) {
+			if (!todo) {
+				todos.insert({ doc: { task } });
+			} else {
+				todo.task = task;
+				todos.update({ doc: todo });
+			}
+		}
+		task = '';
+		todo = null;
+		handleLoad();
+	}
+
+	async function handleLoad() {
+		items = await todos.find({ desc: true });
+	}
+
+	async function handleEdit(item: any) {
+		task = item.task;
+		todo = item;
+	}
+
+	async function handleDelete(item: any) {
+		todos.remove(item._id);
+		todo = null;
+		handleLoad();
+	}
+
+	onMount(async () => {
+		if (browser) {
+			await handleOpenDb();
+			await handleLoad();
+			return () => {
+				db?.close();
+			};
+		}
+	});
+</script>
+
+<div>
+	<div>Welcome to easy-idb databse library.</div>
+	<!-- <button on:click={handleOpenDb}>Open DB</button> -->
+	<hr />
+	<div>
+		<input type="text" bind:value={task} />
+		<button on:click={handleSave}>Save Task</button>
+	</div>
+
+	<hr />
+	<div>
+		{#each items as item}
+			<div>
+				<span>{item.task}</span>
+				<button on:click={() => handleEdit(item)}>Edit</button>
+				<button on:click={() => handleDelete(item)}>Delete</button>
+			</div>
+		{/each}
+	</div>
+</div>

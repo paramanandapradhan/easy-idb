@@ -1,10 +1,11 @@
 export type UpdateCallbackArgs = {
     db: IDBDatabase;
     oldVersion: number;
-    newVersion: number
+    newVersion: number;
+    transaction: IDBTransaction;
 }
 
-export type onUpgradeFn = ({ db, oldVersion, newVersion }: UpdateCallbackArgs) => void;
+export type onUpgradeFn = ({ db, oldVersion, newVersion, transaction }: UpdateCallbackArgs) => void;
 
 export type OpenDbArgs = {
     name: string;
@@ -158,9 +159,9 @@ export type CountArgs = {
 
 export type StoreArgs = {
     name: string,
-    indexes: StoreIndexArgs[],
     primaryKey: string,
-    autoIncrement: boolean
+    autoIncrement?: boolean,
+    indexes?: StoreIndexArgs[] | string[],
 }
 
 export type DatabaseConstructorArgs = {
@@ -172,9 +173,6 @@ export type DatabaseConstructorArgs = {
 export type StoreConstructorArgs = {
     db: IDBDatabase,
     name: string,
-    primaryKey: string,
-    autoIncrement?: boolean,
-    indexes?: StoreIndexArgs[],
 }
 
 export type StoreIndexArgs = {
