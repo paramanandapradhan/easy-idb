@@ -73,28 +73,28 @@ export class Store {
         return find<T>({ db: this.db, storeName: this.name, indexName, skip, limit, desc, unique, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, filter, map })
     }
 
-    insert<T>({ doc }: { doc: T }): Promise<T> {
+    insert<T>(  doc: T  ): Promise<T> {
         return insert<T>({ db: this.db, storeName: this.name, doc });
     }
 
-    insertMany<T>({ docs }: { docs: T[] }): Promise<T[]> {
+    insertMany<T>( docs: T[]  ): Promise<T[]> {
         return insertMany<T>({ db: this.db, storeName: this.name, docs });
     }
 
-    update<T>({ doc }: { doc: T }): Promise<T> {
+    update<T>( doc: T  ): Promise<T> {
         return update<T>({ db: this.db, storeName: this.name, doc });
     }
 
-    updateMany<T>({ docs }: { docs: T[] }): Promise<T[]> {
+    updateMany<T>(  docs: T[] ): Promise<T[]> {
         return updateMany<T>({ db: this.db, storeName: this.name, docs });
     }
 
-    remove(keyValue: string): Promise<string> {
-        return remove({ db: this.db, storeName: this.name, keyValue })
+    remove(value: string): Promise<string> {
+        return remove({ db: this.db, storeName: this.name, value })
     }
 
-    removeMany(keyValues: string[]): Promise<string[]> {
-        return removeMany({ db: this.db, storeName: this.name, keyValues })
+    removeMany(value: string[]): Promise<string[]> {
+        return removeMany({ db: this.db, storeName: this.name, value })
     }
 
 }

@@ -26,14 +26,12 @@ export function openDatabase({ name, version = 1, onUpgrade }: OpenDbArgs): Prom
     return new Promise((resolve, reject) => {
         const req: IDBOpenDBRequest = indexedDB.open(name, version);
         req.onsuccess = () => {
-            console.log('Db open success!')
             resolve(req.result);
         };
         req.onerror = () => {
             reject(`Unable to open indexed db : ` + req.error);
         };
         req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-            console.log('db onupgradeneeded')
             let db = req.result;
             const oldVersion: number = event.oldVersion;
             const newVersion: number = event.newVersion || 1;
@@ -45,7 +43,6 @@ export function openDatabase({ name, version = 1, onUpgrade }: OpenDbArgs): Prom
             }
         };
         req.onblocked = (event: IDBVersionChangeEvent) => {
-            console.log('db onblocked')
         }
     });
 }
@@ -252,14 +249,14 @@ export function updateMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
 }
 
 
-export function remove({ db, storeName, keyValue }: RemoveArgs): Promise<string> {
+export function remove({ db, storeName, value }: RemoveArgs): Promise<string> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false });
-        const getRequest = store.get(keyValue);
+        const getRequest = store.get(value);
         getRequest.onsuccess = () => {
             const document = getRequest.result;
             if (document) {
-                const req = store.delete(keyValue);
+                const req = store.delete(value);
                 req.onsuccess = () => {
                     resolve(document);
                 };
@@ -276,13 +273,13 @@ export function remove({ db, storeName, keyValue }: RemoveArgs): Promise<string>
     });
 }
 
-export function removeMany<T>({ db, storeName, keyValues }: RemoveManyArgs): Promise<T[]> {
+export function removeMany<T>({ db, storeName, value }: RemoveManyArgs): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
         const request = store.openCursor();
         const docs: T[] = [];
-        let valueSet = new Set(keyValues);
+        let valueSet = new Set(value);
 
         request.onsuccess = (event: Event) => {
             const cursor: IDBCursorWithValue = (event.target as IDBRequest).result;

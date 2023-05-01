@@ -30,10 +30,10 @@
 		task = (task || '').trim();
 		if (task) {
 			if (!todo) {
-				todos.insert({ doc: { task } });
+				todos.insert({ task });
 			} else {
 				todo.task = task;
-				todos.update({ doc: todo });
+				todos.update(todo);
 			}
 		}
 		task = '';
