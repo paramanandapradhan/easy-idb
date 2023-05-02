@@ -48,10 +48,10 @@ await todos.insert({ task: 'Task1' });  // Insert one document
 
 await todos.insertMany([{ task: 'Task1' }, { task: 'Task2' }]);  // Insert multiple documents
 
-await todos.get({ value: 1 }); // return the document with primaryKey value 1 (where primaryKey field is `_id`)
-// Result : { _id: 1, task: 'Task1' }
-
 await todos.count(); // count the records in the store
+
+await todos.get( 1 ); // return the document with primaryKey value 1 (where primaryKey field is `_id`)
+// Result : { _id: 1, task: 'Task1' }
 
 await todos.getAll(); // Read all records from a store. Use this method carefully when the store size is large.
 
@@ -68,12 +68,11 @@ await todos.update({ _id: 1, task: 'Task First' });
 
 await todos.updateMany([{ _id: 1, task: 'Task First' }, { _id: 2, task: 'Task Second' }]);
 
-await todos.get({ value: 1 }); // return the document with primaryKey value 1 (where primaryKey field is `_id`)
+await todos.get(1); // return the document with primaryKey value 1 (where primaryKey field is `_id`)
 // Result : { _id: 1, task: 'Task First' }
 
 await todos.remove(1); // Remove record from store with _id = 1
 await todos.removeMany([1, 2]); // Remove multiple records from stores.
-
 
 ```
 
