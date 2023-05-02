@@ -100,7 +100,7 @@ export type RemoveArgs = {
 export type RemoveManyArgs = {
     db: IDBDatabase,
     storeName: string,
-    value: string[],
+    values: string[],
 }
 
 export type GetStoreArgs = {

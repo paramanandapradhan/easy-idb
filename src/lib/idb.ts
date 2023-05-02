@@ -273,13 +273,13 @@ export function remove({ db, storeName, value }: RemoveArgs): Promise<string> {
     });
 }
 
-export function removeMany<T>({ db, storeName, value }: RemoveManyArgs): Promise<T[]> {
+export function removeMany<T>({ db, storeName, values }: RemoveManyArgs): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
         const request = store.openCursor();
         const docs: T[] = [];
-        let valueSet = new Set(value);
+        let valueSet = new Set(values);
 
         request.onsuccess = (event: Event) => {
             const cursor: IDBCursorWithValue = (event.target as IDBRequest).result;
