@@ -4,7 +4,7 @@ import json from './package.json' assert { type: 'json' };
 
 let publicFolder = './public';
 
-let packageJsonKeys = ['name', 'version', 'author', 'license', 'keywords', 'description', 'exports', 'files', 'type', 'main']
+let packageJsonKeys = ['name', 'version', 'author', 'license', 'keywords', 'description', 'exports', 'files', 'type', 'main', 'module', 'svelte', 'types']
 function main() {
     let result = {};
     if (json) {

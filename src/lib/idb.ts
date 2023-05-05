@@ -190,10 +190,16 @@ export function insert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
         const store = getStore({ db, storeName, readOnlyMode: false })
         const req = store.add(doc);
         req.onsuccess = () => {
-            resolve(doc);
+            let getReq = store.get(req.result);
+            getReq.onsuccess = () => {
+                resolve(getReq.result);
+            }
+            getReq.onerror = () => {
+                reject('Error on insert and get: ' + getReq.error);
+            }
         };
         req.onerror = () => {
-            reject('Error on inser: ' + req.error);
+            reject('Error on insert: ' + req.error);
         };
     });
 }
@@ -202,15 +208,22 @@ export function insertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);
+        let results: T[] = [];
         transaction.oncomplete = () => {
-            resolve(docs);
+            resolve(results);
         };
         transaction.onerror = () => {
             reject('Error insert many ' + transaction.error)
         };
 
         (docs || []).forEach((object: any) => {
-            store.add(object);
+            let addReq = store.add(object);
+            addReq.onsuccess = () => {
+                let getReq = store.get(addReq.result);
+                getReq.onsuccess = () => {
+                    results.push(getReq.result);
+                }
+            }
         });
         transaction.commit();
     })
@@ -222,10 +235,16 @@ export function update<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
         const store = getStore({ db, storeName, readOnlyMode: false })
         const req = store.put(doc);
         req.onsuccess = () => {
-            resolve(doc);
+            let getReq = store.get(req.result);
+            getReq.onsuccess = () => {
+                resolve(getReq.result);
+            }
+            getReq.onerror = () => {
+                reject('Error on update and get: ' + getReq.error);
+            }
         };
         req.onerror = () => {
-            reject('Error on inser: ' + req.error);
+            reject('Error on update: ' + req.error);
         };
     });
 }
@@ -234,37 +253,43 @@ export function updateMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);
+        let results: T[] = [];
         transaction.oncomplete = () => {
-            resolve(docs);
+            resolve(results);
         };
         transaction.onerror = () => {
-            reject('Error insert many ' + transaction.error)
+            reject('Error update many: ' + transaction.error)
         };
-
         (docs || []).forEach((object: any) => {
-            store.put(object);
+            let putReq = store.put(object);
+            putReq.onsuccess = () => {
+                let getReq = store.get(putReq.result);
+                getReq.onsuccess = () => {
+                    results.push(getReq.result);
+                }
+            }
         });
         transaction.commit();
     });
 }
 
 
-export function remove({ db, storeName, value }: RemoveArgs): Promise<string> {
+export function remove<T>({ db, storeName, value }: RemoveArgs): Promise<T | null> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false });
         const getRequest = store.get(value);
         getRequest.onsuccess = () => {
-            const document = getRequest.result;
-            if (document) {
-                const req = store.delete(value);
-                req.onsuccess = () => {
-                    resolve(document);
+            const result: T = getRequest.result;
+            if (result) {
+                const delReq = store.delete(value);
+                delReq.onsuccess = () => {
+                    resolve(result);
                 };
-                req.onerror = () => {
-                    reject('Error on delete doc: ' + req.error);
+                delReq.onerror = () => {
+                    reject('Error on get and remove : ' + delReq.error);
                 };
             } else {
-                reject('Doc not found');
+                resolve(null)
             }
         };
         getRequest.onerror = () => {
@@ -273,30 +298,27 @@ export function remove({ db, storeName, value }: RemoveArgs): Promise<string> {
     });
 }
 
-export function removeMany<T>({ db, storeName, values }: RemoveManyArgs): Promise<T[]> {
+export function removeMany<T>({ db, storeName, values }: RemoveManyArgs): Promise<(T | null)[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
-        const request = store.openCursor();
-        const docs: T[] = [];
-        let valueSet = new Set(values);
-
-        request.onsuccess = (event: Event) => {
-            const cursor: IDBCursorWithValue = (event.target as IDBRequest).result;
-            if (cursor) {
-                if (cursor.value && valueSet.has(cursor.value[cursor.primaryKey as string])) {
-                    docs.push(cursor.value);
-                    cursor.delete();
-                    cursor.continue();
+        const results: (T | null)[] = [];
+        (values).forEach((value) => {
+            const getReq = store.get(value);
+            getReq.onsuccess = () => {
+                const result: T = getReq.result;
+                if (result) {
+                    const delReq = store.delete(value);
+                    delReq.onsuccess = () => {
+                        results.push(result);
+                    };
+                } else {
+                    results.push(null);
                 }
-            } else {
-                // No more entries
-                transaction.commit();
-            }
-        };
-
+            };
+        })
         transaction.oncomplete = () => {
-            resolve(docs);
+            resolve(results);
         };
 
         transaction.onerror = () => {

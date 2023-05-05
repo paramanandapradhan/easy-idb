@@ -93,14 +93,14 @@ export type UpdateManyArgs<T> = {
 export type RemoveArgs = {
     db: IDBDatabase,
     storeName: string;
-    value: string,
+    value: IDBValidKey,
 
 }
 
 export type RemoveManyArgs = {
     db: IDBDatabase,
     storeName: string,
-    values: string[],
+    values: IDBValidKey[],
 }
 
 export type GetStoreArgs = {

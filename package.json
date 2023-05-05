@@ -1,6 +1,6 @@
 {
 	"name": "@cloudparker/easy-idb",
-	"version": "0.0.14",
+	"version": "0.0.19",
 	"author": "cloudparker.com",
 	"license": "MIT",
 	"keywords": [
@@ -9,6 +9,7 @@
 	],
 	"description": "A lightweight, promise-based JavaScript library for working with IndexedDB, providing simplicity and ease of use.",
 	"main": "./dist/index.js",
+	"module": "./dist/index.js",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run package",
@@ -26,6 +27,18 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
+		},
+		"./store": {
+			"types": "./dist/store.d.ts",
+			"import": "./dist/store.js"
+		},
+		"./database": {
+			"types": "./dist/database.d.ts",
+			"import": "./dist/database.js"
+		},
+		"./idb": {
+			"types": "./dist/idb.d.ts",
+			"import": "./dist/idb.js"
 		}
 	},
 	"files": [
