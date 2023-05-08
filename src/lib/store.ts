@@ -1,6 +1,5 @@
 import {
     count,
-    createStore,
     get,
     getAll,
     find,
@@ -10,6 +9,8 @@ import {
     removeMany,
     insert,
     insertMany,
+    upsertMany,
+    upsert,
 } from "./idb";
 import type { StoreConstructorArgs, StoreIndexArgs } from "./types";
 
@@ -20,15 +21,18 @@ import type { StoreConstructorArgs, StoreIndexArgs } from "./types";
 export class Store {
     readonly name: string;
     readonly db: IDBDatabase;
+    readonly indexName?: string | null;
 
     /**
      * 
      * @param db:  IDBDatabase instance
      * @param name: Object Store Name
+     * @param indexName: Object Store Index Name for data query
      */
-    constructor({ db, name }: StoreConstructorArgs) {
+    constructor({ db, name, indexName = null }: StoreConstructorArgs) {
         this.db = db;
         this.name = name;
+        this.indexName = indexName;
     }
 
     /**
@@ -50,7 +54,7 @@ export class Store {
         valueEnd?: IDBValidKey;
         valueEndBefore?: IDBValidKey;
     } = {}): Promise<T> {
-        return get<T>({ db: this.db, storeName: this.name, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, })
+        return get<T>({ db: this.db, storeName: this.name, indexName: indexName || this.indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, })
     }
 
     /**
@@ -76,7 +80,7 @@ export class Store {
         valueEndBefore?: IDBValidKey;
         count?: number,
     } = {}): Promise<T[]> {
-        return getAll<T>({ db: this.db, storeName: this.name, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count })
+        return getAll<T>({ db: this.db, storeName: this.name, indexName: indexName || this.indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count })
     }
 
     /**
@@ -99,7 +103,7 @@ export class Store {
         valueEnd?: IDBValidKey;
         valueEndBefore?: IDBValidKey;
     } = {}): Promise<number> {
-        return count({ db: this.db, storeName: this.name, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, })
+        return count({ db: this.db, storeName: this.name, indexName: indexName || this.indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, })
     }
 
     /**
@@ -135,7 +139,7 @@ export class Store {
         filter?: (object: any) => boolean;
         map?: (object: any) => any;
     } = {}): Promise<T[]> {
-        return find<T>({ db: this.db, storeName: this.name, indexName, skip, limit, desc, unique, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, filter, map })
+        return find<T>({ db: this.db, storeName: this.name, indexName: indexName || this.indexName, skip, limit, desc, unique, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, filter, map })
     }
 
     /**
@@ -172,6 +176,24 @@ export class Store {
      */
     updateMany<T>(docs: T[]): Promise<T[]> {
         return updateMany<T>({ db: this.db, storeName: this.name, docs });
+    }
+
+    /**
+     * Upsert a object to the store.
+     * @param doc Updateable document
+     * @returns <T> Return upddated object
+     */
+    upsert<T>(doc: T): Promise<T> {
+        return upsert<T>({ db: this.db, storeName: this.name, doc });
+    }
+
+    /**
+     * Upsert multiple objects to the store.
+     * @param docs Updateable documents
+     * @returns <T>[] Return updated objects
+     */
+    upsertMany<T>(docs: T[]): Promise<T[]> {
+        return upsertMany<T>({ db: this.db, storeName: this.name, docs });
     }
 
     /**

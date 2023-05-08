@@ -1,6 +1,6 @@
 import { createStore, find, insertMany, openDatabase, removeDatabase, removeStore } from "./idb";
 import { Store } from "./store";
-import type { DatabaseConstructorArgs, RestoreDataArgs, StoreArgs, StoreIndexArgs, onUpgradeFn } from "./types";
+import type { DatabaseConstructorArgs, RestoreDataArgs, StoreArgs, StoreIndexArgs, StoresMapArgs, onUpgradeFn } from "./types";
 
 export class Database {
     readonly name: string;
@@ -8,7 +8,7 @@ export class Database {
     readonly isReady: Promise<IDBDatabase>;
 
     private stores: StoreArgs[];
-    private storesMap: { [key: string]: Store } = {};
+    private storesMap: StoresMapArgs = {};
     private db: IDBDatabase | null = null;
     private isReadyResolve: Function = () => { };
     private isReadyReject: Function = () => { };
@@ -25,7 +25,7 @@ export class Database {
         })
     }
 
-    async openDatabase(onUpgrade?: onUpgradeFn): Promise<{ [key: string]: Store, }> {
+    async openDatabase(onUpgrade?: onUpgradeFn): Promise<StoresMapArgs> {
         try {
             this.db = await openDatabase({
                 name: this.name, version: this.version,
@@ -34,22 +34,32 @@ export class Database {
                         this.isSchemaReady = true;
 
                         this.stores.forEach((item: StoreArgs) => {
+                            const storeName = item.name;
+                            this.storesMap[item.name] = { indexStores: {} };
                             let store: IDBObjectStore;
                             if (!db.objectStoreNames.contains(item.name)) {
-                                store = createStore({ db, storeName: item.name, primaryKey: item.primaryKey, autoIncrement: item.autoIncrement });
+                                store = createStore({ db, storeName, primaryKey: item.primaryKey, autoIncrement: item.autoIncrement });
                             } else {
-                                store = transaction.objectStore(item.name)
+                                store = transaction.objectStore(storeName)
                             }
 
+                            // Prepare string index names to structured format
                             let indexes = (item.indexes || []).map((index: string | StoreIndexArgs) => {
                                 if (typeof index == 'string') {
-                                    return { name: index } as StoreIndexArgs
+                                    return { name: index, keyPath: index } as StoreIndexArgs
+                                }
+                                if (!index.name) {
+                                    if (index.keyPath && Array.isArray(index.keyPath)) {
+                                        index.name = index.keyPath.join('-');
+                                    } else {
+                                        index.name = index.keyPath;
+                                    }
                                 }
                                 return index as StoreIndexArgs;
                             })
 
                             // Remove indexes
-                            let indexSet: Set<string> = new Set(indexes.map((index: StoreIndexArgs) => index.name));
+                            let indexSet: Set<string> = new Set(indexes.map((index: StoreIndexArgs) => index.name!));
                             const indexNames = store.indexNames || [];
                             for (let i = 0; i < indexNames.length; i++) {
                                 let indexName = indexNames[i];
@@ -62,9 +72,10 @@ export class Database {
 
                             // Create indexes 
                             indexes.forEach((index) => {
-                                if (!store.indexNames.contains(index.name)) {
-                                    store.createIndex(index.name, index.name, { unique: index.unique, multiEntry: index.multiEntry })
+                                if (!store.indexNames.contains(index.name!)) {
+                                    store.createIndex(index.name!, index.keyPath, { unique: index.unique, multiEntry: index.multiEntry })
                                 }
+                                this.storesMap[store.name].indexStores![index.name!] = new Store({ db: this.db!, name: storeName, indexName: index.name! });
                             });
                         });
                     }
@@ -79,8 +90,8 @@ export class Database {
         }
 
         if (this.db) {
-            this.stores.forEach((item: StoreArgs) => {
-                this.storesMap[item.name] = new Store({ db: this.db!, name: item.name });
+            this.stores.forEach((store: StoreArgs) => {
+                this.storesMap[store.name].store = new Store({ db: this.db!, name: store.name });
             });
         }
 
@@ -91,8 +102,17 @@ export class Database {
         return removeDatabase(this.name);
     }
 
-    getStore(name: string): Store {
-        return this.storesMap[name];
+    getStore(name: string): Store | undefined {
+        return this.storesMap[name].store;
+    }
+
+    getIndexStore(name: string, indexName: string | string[]): Store | undefined {
+        if (indexName && Array.isArray(indexName)) {
+            indexName = indexName.join('-');
+        }
+        if (this.storesMap[name] && this.storesMap[name].indexStores) {
+            return this.storesMap[name].indexStores![indexName];
+        }
     }
 
     removeStore(name: string): void {

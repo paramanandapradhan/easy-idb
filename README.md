@@ -39,8 +39,8 @@ let results = await db.openDatabase(({ db, oldVersion, newVersion }) => {
   console.log({ db, oldVersion, newVersion });
 });
 
-todos = results.todos; // todos store instance
-users = results.users; // users store instance
+todos = results.todos.store; // todos store instance
+users = results.users.store; // users store instance
 
 console.log('Db opened');
 

@@ -273,6 +273,87 @@ export function updateMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
     });
 }
 
+export function upsert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+
+
+        const onSuccess = (event: any) => {
+            const getRequest = store.get(event.target.result);
+            getRequest.onsuccess = () => resolve(getRequest.result);
+            getRequest.onerror = () => reject(`Error on upsert get: ${getRequest.error}`);
+        };
+
+        const onError = (action: any) => (event: any) => {
+            reject(`Error on upsert ${action}: ${event.target.error}`);
+            transaction.abort();
+        };
+
+        const primaryKey = (doc as any)[(store as any).keyPath];
+        if (primaryKey) {
+            const getReq = store.get(primaryKey);
+            getReq.onsuccess = () => {
+                const request = getReq.result ? store.add(doc) : store.put(doc);
+                request.onsuccess = onSuccess;
+                request.onerror = onError(getReq.result ? 'add' : 'put');
+            };
+            getReq.onerror = onError('get');
+        } else {
+            const addReq = store.add(doc);
+            addReq.onsuccess = onSuccess;
+            addReq.onerror = onError('add');
+        }
+    });
+}
+
+export function upsertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promise<T[]> {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+
+        let results: T[] = [];
+
+        let isTransactionAborted = false;
+
+        transaction.oncomplete = () => resolve(results);
+        transaction.onerror = () => reject(`Error update many: ${transaction.error}`);
+
+        const onSuccess = (event: any) => {
+            const getRequest = store.get(event.target.result);
+            getRequest.onsuccess = () => {
+                results.push(getRequest.result);
+            };
+            getRequest.onerror = () => reject(`Error on upsert get: ${getRequest.error}`);
+        };
+
+        const onError = (action: any) => (event: any) => {
+            if (!isTransactionAborted) {
+                isTransactionAborted = true;
+                reject(`Error on upsert ${action}: ${event.target.error}`);
+                transaction.abort();
+            }
+        };
+
+        docs.forEach((doc: any) => {
+            const primaryKey = (doc)[(store as any).keyPath];
+            if (primaryKey) {
+                const getReq = store.get(primaryKey);
+                getReq.onsuccess = () => {
+                    const request = getReq.result ? store.add(doc) : store.put(doc);
+                    request.onsuccess = onSuccess;
+                    request.onerror = onError(getReq.result ? 'add' : 'put');
+                };
+                getReq.onerror = onError('get');
+            } else {
+                const addReq = store.add(doc);
+                addReq.onsuccess = onSuccess;
+                addReq.onerror = onError('add');
+            }
+        });
+    });
+}
+
 
 export function remove<T>({ db, storeName, value }: RemoveArgs): Promise<T | null> {
     return new Promise((resolve, reject) => {

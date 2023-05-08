@@ -1,3 +1,5 @@
+import type { Store } from "./store";
+
 export type UpdateCallbackArgs = {
     db: IDBDatabase;
     oldVersion: number;
@@ -37,7 +39,7 @@ export type RemoveIndexArgs = {
 export type FindArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string;
+    indexName?: string | null | undefined;
     skip?: number;
     limit?: number;
     desc?: boolean;
@@ -54,7 +56,7 @@ export type FindArgs = {
 export type OpenCursorArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string;
+    indexName?: string | null | undefined;
     desc?: boolean;
     unique?: boolean;
     value?: IDBValidKey;
@@ -110,7 +112,7 @@ export type GetStoreArgs = {
 }
 
 export type GetSearchArgs = {
-    indexName?: string;
+    indexName?: string | null | undefined;
     value?: IDBValidKey;
     valueStart?: IDBValidKey;
     valueStartAfter?: IDBValidKey;
@@ -121,7 +123,7 @@ export type GetSearchArgs = {
 export type GetArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string;
+    indexName?: string | null | undefined;
     value?: IDBValidKey;
     valueStart?: IDBValidKey;
     valueStartAfter?: IDBValidKey;
@@ -132,7 +134,7 @@ export type GetArgs = {
 export type GetAllArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string;
+    indexName?: string | null | undefined;
     desc?: boolean;
     unique?: boolean;
     value?: IDBValidKey;
@@ -146,7 +148,7 @@ export type GetAllArgs = {
 export type CountArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string;
+    indexName?: string | null | undefined;
     desc?: boolean;
     unique?: boolean;
     value?: IDBValidKey;
@@ -173,12 +175,14 @@ export type DatabaseConstructorArgs = {
 export type StoreConstructorArgs = {
     db: IDBDatabase,
     name: string,
+    indexName?: string | null;
 }
 
 export type StoreIndexArgs = {
-    name: string,
+    keyPath: string | string[],
+    multiEntry?: boolean,
+    name?: string,
     unique?: boolean,
-    multiEntry?: boolean
 };
 
 
@@ -199,3 +203,5 @@ export type RestoreDataArgs = {
         }
     ]
 }
+
+export type StoresMapArgs ={ [key: string]: { store?: Store, indexStores?: { [key: string]: Store } } };
