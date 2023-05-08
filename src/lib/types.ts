@@ -204,4 +204,4 @@ export type RestoreDataArgs = {
     ]
 }
 
-export type StoresMapArgs ={ [key: string]: { store?: Store, indexStores?: { [key: string]: Store } } };
+export type StoresMapArgs = { [key: string]: { store?: Store, indexStores?: { [key: string]: Store } } };

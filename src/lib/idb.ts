@@ -294,9 +294,9 @@ export function upsert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
         if (primaryKey) {
             const getReq = store.get(primaryKey);
             getReq.onsuccess = () => {
-                const request = getReq.result ? store.add(doc) : store.put(doc);
+                const request = getReq.result ? store.put(doc) : store.add(doc);
                 request.onsuccess = onSuccess;
-                request.onerror = onError(getReq.result ? 'add' : 'put');
+                request.onerror = onError(getReq.result ? 'put' : 'add');
             };
             getReq.onerror = onError('get');
         } else {
@@ -340,9 +340,9 @@ export function upsertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
             if (primaryKey) {
                 const getReq = store.get(primaryKey);
                 getReq.onsuccess = () => {
-                    const request = getReq.result ? store.add(doc) : store.put(doc);
+                    const request = getReq.result ? store.put(doc) : store.add(doc);
                     request.onsuccess = onSuccess;
-                    request.onerror = onError(getReq.result ? 'add' : 'put');
+                    request.onerror = onError(getReq.result ? 'put' : 'add');
                 };
                 getReq.onerror = onError('get');
             } else {
@@ -450,7 +450,7 @@ function createDirection({ desc = false, unique = false }: {
     return direction || undefined;
 }
 
-function getStore({ db, storeName, readOnlyMode = false }: GetStoreArgs): IDBObjectStore {
+export function getStore({ db, storeName, readOnlyMode = false }: GetStoreArgs): IDBObjectStore {
     const tx = db.transaction(storeName, readOnlyMode ? 'readonly' : 'readwrite');
     return tx.objectStore(storeName);
 }

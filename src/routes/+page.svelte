@@ -21,19 +21,19 @@
 		let results = await db.openDatabase(({ db, oldVersion, newVersion }) => {
 			console.log({ db, oldVersion, newVersion });
 		});
-		console.log('Db opened');
-		todos = results.todos;
+		console.log('Db opened', results);
+		todos = results.todos.store!;
 		console.log(results);
 	}
 
-	function handleSave() {
+	async function handleSave() {
 		task = (task || '').trim();
 		if (task) {
 			if (!todo) {
-				todos.insert({ task });
+				console.log(await todos.upsert({ task }));
 			} else {
 				todo.task = task;
-				todos.update(todo);
+				console.log(await todos.upsertMany([todo]));
 			}
 		}
 		task = '';
@@ -51,7 +51,8 @@
 	}
 
 	async function handleDelete(item: any) {
-		todos.remove(item._id);
+		console.log(item._id);
+		todos.remove({ value: item._id });
 		todo = null;
 		handleLoad();
 	}

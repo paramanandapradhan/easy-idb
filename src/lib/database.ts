@@ -1,6 +1,6 @@
-import { createStore, find, insertMany, openDatabase, removeDatabase, removeStore } from "./idb";
+import { createStore, find, insertMany, openDatabase, removeDatabase, removeStore, getStore } from "./idb";
 import { Store } from "./store";
-import type { DatabaseConstructorArgs, RestoreDataArgs, StoreArgs, StoreIndexArgs, StoresMapArgs, onUpgradeFn } from "./types";
+import type { DatabaseConstructorArgs, RestoreDataArgs, StoreArgs, StoreIndexArgs, StoresMapArgs, onUpgradeFn, } from "./types";
 
 export class Database {
     readonly name: string;
@@ -35,7 +35,6 @@ export class Database {
 
                         this.stores.forEach((item: StoreArgs) => {
                             const storeName = item.name;
-                            this.storesMap[item.name] = { indexStores: {} };
                             let store: IDBObjectStore;
                             if (!db.objectStoreNames.contains(item.name)) {
                                 store = createStore({ db, storeName, primaryKey: item.primaryKey, autoIncrement: item.autoIncrement });
@@ -75,7 +74,6 @@ export class Database {
                                 if (!store.indexNames.contains(index.name!)) {
                                     store.createIndex(index.name!, index.keyPath, { unique: index.unique, multiEntry: index.multiEntry })
                                 }
-                                this.storesMap[store.name].indexStores![index.name!] = new Store({ db: this.db!, name: storeName, indexName: index.name! });
                             });
                         });
                     }
@@ -90,9 +88,20 @@ export class Database {
         }
 
         if (this.db) {
-            this.stores.forEach((store: StoreArgs) => {
-                this.storesMap[store.name].store = new Store({ db: this.db!, name: store.name });
-            });
+            await Promise.all(this.stores.map(async (store: StoreArgs) => {
+                this.storesMap[store.name] = { indexStores: {} };
+                let storeMap = this.storesMap[store.name];
+                storeMap.store = new Store({ db: this.db!, name: store.name });
+                let objectStore = getStore({ db: this.db!, storeName: store.name });
+                if (objectStore) {
+                    for (let i = 0; i < objectStore.indexNames.length; i++) {
+                        let indexName = objectStore.indexNames[i];
+                        if (indexName) {
+                            storeMap.indexStores![indexName] = new Store({ db: this.db!, name: store.name, indexName: indexName })
+                        }
+                    }
+                }
+            }));
         }
 
         return { ...this.storesMap };
