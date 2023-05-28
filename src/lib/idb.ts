@@ -57,17 +57,27 @@ export function removeStore({ db, storeName, }: RemoveStoreArgs): void {
 
 export function createIndex({ db, storeName, indexName, unique = false, multiEntry = false, }: CreateIndexArgs): IDBIndex {
     let store = getStore({ db, storeName, readOnlyMode: false })
-    return store.createIndex(indexName, indexName, { multiEntry, unique });
+    let actualIndexName: string;
+    if (indexName && Array.isArray(indexName)) {
+        actualIndexName = indexName.join('-')
+    } else {
+        actualIndexName = indexName as string;
+    }
+    return store.createIndex(actualIndexName, indexName as string[] | string, { multiEntry, unique });
 }
 
 export function removeIndex({ db, storeName, indexName }: RemoveIndexArgs): void {
     let store = getStore({ db, storeName, readOnlyMode: false })
-    return store.deleteIndex(indexName);
+    if (indexName && Array.isArray(indexName)) {
+        indexName = indexName.join('-')
+    }
+    return store.deleteIndex(indexName as string);
 }
 
 
-export function clearStore({ store }: { store: IDBObjectStore }): Promise<void> {
+export function clearStore({ db, storeName }: { db: IDBDatabase, storeName: string }): Promise<void> {
     return new Promise((resolve, reject) => {
+        let store = getStore({ db, storeName });
         const req = store.clear();
         req.onsuccess = () => {
             resolve();
@@ -83,6 +93,9 @@ export function openCursor({ db, storeName, indexName, desc = false, unique = fa
         const queryDirection = createDirection({ desc, unique });
         const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
         const store = getStore({ db, storeName });
+        if (indexName && Array.isArray(indexName)) {
+            indexName = indexName.join('-')
+        }
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).openCursor(keyRange, queryDirection);
         if (req) {
@@ -143,6 +156,9 @@ export function find<T>({ db, storeName, indexName, skip = 0, limit = Math.pow(2
 export function get<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, }: GetArgs): Promise<T> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false })
+        if (indexName && Array.isArray(indexName)) {
+            indexName = indexName.join('-')
+        }
         const indexeStore = indexName ? store.index(indexName) : null;
         const req = (indexeStore || store).get(createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore, })!);
         req.onsuccess = () => {
@@ -154,10 +170,13 @@ export function get<T>({ db, storeName, indexName, value, valueStart, valueStart
     });
 }
 
-export function getAll<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count = Math.pow(2, 32) }: GetAllArgs): Promise<T[]> {
+export function getAll<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count }: GetAllArgs): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
         const store = getStore({ db, storeName });
+        if (indexName && Array.isArray(indexName)) {
+            indexName = indexName.join('-')
+        }
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).getAll(keyRange, count);
         req.onsuccess = () => {
@@ -173,6 +192,9 @@ export function count({ db, storeName, indexName, value, valueStart, valueStartA
     return new Promise((resolve, reject) => {
         const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
         const store = getStore({ db, storeName });
+        if (indexName && Array.isArray(indexName)) {
+            indexName = indexName.join('-')
+        }
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).count(keyRange);
         req.onsuccess = () => {

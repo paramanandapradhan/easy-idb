@@ -11,6 +11,7 @@ import {
     insertMany,
     upsertMany,
     upsert,
+    clearStore,
 } from "./idb";
 import type { StoreConstructorArgs, StoreIndexArgs } from "./types";
 
@@ -21,7 +22,7 @@ import type { StoreConstructorArgs, StoreIndexArgs } from "./types";
 export class Store {
     readonly name: string;
     readonly db: IDBDatabase;
-    readonly indexName?: string | null;
+    readonly indexName?: string[] | string | null | undefined;
 
     /**
      * 
@@ -33,6 +34,9 @@ export class Store {
         this.db = db;
         this.name = name;
         this.indexName = indexName;
+        if (indexName && Array.isArray(indexName)) {
+            this.indexName = indexName.join('-');
+        }
     }
 
     /**
@@ -47,7 +51,7 @@ export class Store {
      * @returns <T> Return object based on tht query match.
      */
     get<T>({ indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore }: {
-        indexName?: string;
+        indexName?: string[] | string | null | undefined;
         value?: IDBValidKey;
         valueStart?: IDBValidKey;
         valueStartAfter?: IDBValidKey;
@@ -72,7 +76,7 @@ export class Store {
      * @returns <T>[] Return array of objects based on tht query match.
      */
     getAll<T>({ indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count }: {
-        indexName?: string;
+        indexName?: string[] | string | null | undefined;
         value?: IDBValidKey;
         valueStart?: IDBValidKey;
         valueStartAfter?: IDBValidKey;
@@ -96,7 +100,7 @@ export class Store {
      * @returns number Return count of records match the query 
      */
     count({ indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, }: {
-        indexName?: string;
+        indexName?: string[] | string | null | undefined;
         value?: IDBValidKey;
         valueStart?: IDBValidKey;
         valueStartAfter?: IDBValidKey;
@@ -126,7 +130,7 @@ export class Store {
      * @returns <T>[] Return array of objects based on tht query match.
      */
     find<T>({ indexName, skip, limit, desc, unique, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, filter, map }: {
-        indexName?: string;
+        indexName?: string[] | string | null | undefined;
         skip?: number;
         limit?: number;
         desc?: boolean;
@@ -212,6 +216,14 @@ export class Store {
      */
     removeMany<T>({ values }: { values: IDBValidKey[] }): Promise<(T | null)[]> {
         return removeMany<T>({ db: this.db, storeName: this.name, values })
+    }
+
+    /**
+     * Remove all object fron the store.
+     * @returns <void> Return void
+     */
+    removeAll<T>(): Promise<void> {
+        return clearStore({ db: this.db, storeName: this.name })
     }
 
 }

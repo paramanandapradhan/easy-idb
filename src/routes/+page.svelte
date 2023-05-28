@@ -42,7 +42,7 @@
 	}
 
 	async function handleLoad() {
-		items = await todos.find({ desc: true });
+		items = await todos.getAll();
 	}
 
 	async function handleEdit(item: any) {

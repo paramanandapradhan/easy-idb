@@ -25,7 +25,7 @@ export type CreateStoreArgs = {
 export type CreateIndexArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName: string;
+    indexName?: string[] | string | null | undefined;
     unique?: boolean;
     multiEntry?: boolean;
 }
@@ -33,13 +33,13 @@ export type CreateIndexArgs = {
 export type RemoveIndexArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName: string;
+    indexName?: string[] | string | null | undefined;
 }
 
 export type FindArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string | null | undefined;
+    indexName?: string[] | string | null | undefined;
     skip?: number;
     limit?: number;
     desc?: boolean;
@@ -56,7 +56,7 @@ export type FindArgs = {
 export type OpenCursorArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string | null | undefined;
+    indexName?: string[] | string | null | undefined;
     desc?: boolean;
     unique?: boolean;
     value?: IDBValidKey;
@@ -112,7 +112,7 @@ export type GetStoreArgs = {
 }
 
 export type GetSearchArgs = {
-    indexName?: string | null | undefined;
+    indexName?: string[] | string | null | undefined;
     value?: IDBValidKey;
     valueStart?: IDBValidKey;
     valueStartAfter?: IDBValidKey;
@@ -123,7 +123,7 @@ export type GetSearchArgs = {
 export type GetArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string | null | undefined;
+    indexName?: string[] | string | null | undefined;
     value?: IDBValidKey;
     valueStart?: IDBValidKey;
     valueStartAfter?: IDBValidKey;
@@ -134,7 +134,7 @@ export type GetArgs = {
 export type GetAllArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string | null | undefined;
+    indexName?: string[] | string | null | undefined;
     desc?: boolean;
     unique?: boolean;
     value?: IDBValidKey;
@@ -148,7 +148,7 @@ export type GetAllArgs = {
 export type CountArgs = {
     db: IDBDatabase,
     storeName: string;
-    indexName?: string | null | undefined;
+    indexName?: string[] | string | null | undefined;
     desc?: boolean;
     unique?: boolean;
     value?: IDBValidKey;
@@ -175,7 +175,7 @@ export type DatabaseConstructorArgs = {
 export type StoreConstructorArgs = {
     db: IDBDatabase,
     name: string,
-    indexName?: string | null;
+    indexName?: string[] | string | null | undefined;
 }
 
 export type StoreIndexArgs = {
