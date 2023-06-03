@@ -437,6 +437,10 @@ export function removeDatabase(dbName: string): Promise<string> {
         req.onsuccess = () => {
             resolve('DB deleted');
         };
+        req.onblocked = (ev) => {
+            console.error(ev);
+            reject('Blocked on deleting db.');
+        };
         req.onerror = () => {
             reject('Error on deleting db: ' + req.error);
         };

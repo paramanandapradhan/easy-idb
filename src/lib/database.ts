@@ -107,7 +107,7 @@ export class Database {
         return { ...this.storesMap };
     }
 
-    deleteDatabse() {
+    deleteDatabase() {
         return removeDatabase(this.name);
     }
 
