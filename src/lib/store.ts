@@ -40,16 +40,16 @@ export class Store {
     }
 
     /**
-     * Get one object from the object store
-     * @param indexName Provide index name for the query param match
-     * @param value A value == to the index value or primaryKey value.
-     * @param valueStart A value >= to the index or primaryIndex value.
-     * @param valueStartAfter A value > to the index or primaryIndex value.
-     * @param valueEnd A value <= to the index or primaryIndex value.
-     * @param valueEndBefore A value < to the index or primaryIndex value.
-     * 
-     * @returns <T> Return object based on tht query match.
-     */
+    * Get one object from the object store
+    * @param indexName Provide index name for the query param match
+    * @param value A value == to the index value or primaryKey value.
+    * @param valueStart A value >= to the index or primaryIndex value.
+    * @param valueStartAfter A value > to the index or primaryIndex value.
+    * @param valueEnd A value <= to the index or primaryIndex value.
+    * @param valueEndBefore A value < to the index or primaryIndex value.
+    * 
+    * @returns <T> Return object based on tht query match.
+    */
     get<T>({ indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore }: {
         indexName?: string[] | string | null | undefined;
         value?: IDBValidKey;

@@ -458,12 +458,12 @@ function createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEnd
     let keyRange: IDBKeyRange | undefined = undefined;
     if (value) {
         keyRange = IDBKeyRange.only(value);
+    } else if ((valueStart || valueStartAfter) && (valueEnd || valueEndBefore)) {
+        keyRange = IDBKeyRange.bound(valueStart || valueStartAfter, valueEnd || valueEndBefore, !!valueStartAfter, !!valueEndBefore);
     } else if (valueStart || valueStartAfter) {
         keyRange = IDBKeyRange.lowerBound(valueStart || valueStartAfter, !!valueStartAfter);
     } else if (valueEnd || valueEndBefore) {
         keyRange = IDBKeyRange.upperBound(valueEnd || valueEndBefore, !!valueEndBefore);
-    } else if (valueStart || valueStartAfter || valueEnd || valueEndBefore) {
-        keyRange = IDBKeyRange.bound(valueStart || valueStartAfter, valueEnd || valueEndBefore, !!valueStartAfter, !!valueEndBefore);
     }
     return keyRange;
 }
