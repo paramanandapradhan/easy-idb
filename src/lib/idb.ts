@@ -1,15 +1,12 @@
 import type {
     RemoveIndexArgs,
     WhereConstraint,
+    WhereOps,
     onUpgradeFn
 } from "./types";
 
-export function where(constrain: WhereConstraint, constrain2?: WhereConstraint): WhereConstraint[] {
-    const constrains = [constrain];
-    if (constrain2) {
-        constrains.push(constrain2);
-    }
-    return constrains;
+export function where(field: IDBValidKey, ops: WhereOps, value: IDBValidKey): WhereConstraint {
+    return { field, ops, value };
 }
 
 /**
@@ -107,14 +104,14 @@ export function openCursor({ db, storeName, desc = false, unique = false, where,
     storeName: string;
     desc?: boolean;
     unique?: boolean;
-    where?: WhereConstraint[],
+    where?: WhereConstraint | WhereConstraint[],
     processor?: (cursor: IDBCursorWithValue) => void;
 }): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const queryDirection = createDirection({ desc, unique });
-        const indexName = prepareIndexNameFromConstraints(where);
         const keyRange = createKeyRange(where);
         const store = getStore({ db, storeName });
+        const indexName = prepareIndexNameFromConstraints(store, where);
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).openCursor(keyRange, queryDirection);
         if (req) {
@@ -142,7 +139,7 @@ export function find<T>({ db, storeName, skip = 0, limit = Math.pow(2, 32), desc
     limit?: number;
     desc?: boolean;
     unique?: boolean;
-    where?: WhereConstraint[],
+    where?: WhereConstraint | WhereConstraint[],
     filter?: (object: any) => boolean;
     map?: (object: any) => any;
 }): Promise<T[]> {
@@ -186,11 +183,11 @@ export function get<T>({ db, storeName, where }:
     {
         db: IDBDatabase,
         storeName: string;
-        where: WhereConstraint[],
+        where: WhereConstraint | WhereConstraint[],
     }): Promise<T> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false })
-        const indexName = prepareIndexNameFromConstraints(where);
+        const indexName = prepareIndexNameFromConstraints(store, where);
         const indexeStore = indexName ? store.index(indexName) : null;
         const req = (indexeStore || store).get(createKeyRange(where)!);
         req.onsuccess = () => {
@@ -208,13 +205,13 @@ export function getAll<T>({ db, storeName, where, count }: {
     indexName?: string[] | string | null | undefined;
     desc?: boolean;
     unique?: boolean;
-    where?: WhereConstraint[],
+    where?: WhereConstraint | WhereConstraint[],
     count?: number,
 }): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const keyRange = createKeyRange(where);
         const store = getStore({ db, storeName });
-        const indexName = prepareIndexNameFromConstraints(where);
+        const indexName = prepareIndexNameFromConstraints(store, where);
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).getAll(keyRange, count);
         req.onsuccess = () => {
@@ -229,12 +226,12 @@ export function getAll<T>({ db, storeName, where, count }: {
 export function count({ db, storeName, where }: {
     db: IDBDatabase,
     storeName: string,
-    where?: WhereConstraint[],
+    where?: WhereConstraint | WhereConstraint[],
 }): Promise<number> {
     return new Promise((resolve, reject) => {
         const keyRange = createKeyRange(where);
         const store = getStore({ db, storeName });
-        const indexName = prepareIndexNameFromConstraints(where);
+        const indexName = prepareIndexNameFromConstraints(store, where);
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).count(keyRange);
         req.onsuccess = () => {
@@ -520,19 +517,36 @@ export function removeDatabase(dbName: string): Promise<string> {
 
 }
 
-function prepareIndexNameFromConstraints(constrains: WhereConstraint[] = []) {
-    let result: IDBValidKey = '';
+function prepareIndexNameFromConstraints(store: IDBObjectStore, constrains: WhereConstraint | WhereConstraint[] = []) {
+    let indexName: IDBValidKey = '';
+    let field: IDBValidKey = '';
 
-    (constrains).forEach((constrain) => {
-        result = constrain.field;
-    })
-    if (result && Array.isArray(result)) {
-        result = result.join('-');
+    let constraintArray: WhereConstraint[];
+    if (Array.isArray(constrains)) {
+        constraintArray = constrains
+    } else {
+        constraintArray = [constrains]
     }
-    return result
+
+    (constraintArray).forEach((constrain) => {
+        indexName = constrain.field;
+        field = constrain.field;
+    })
+
+    if (indexName && Array.isArray(indexName)) {
+        indexName = indexName.join('-');
+    }
+    if (store.keyPath == indexName) {
+        // primary key should not provide any indexName
+        indexName = '';
+    } else if (!store.indexNames.contains(indexName)) {
+        throw Error('Index not found! ' + field);
+    }
+
+    return indexName
 }
 
-function prepareKeyRangeConstraints(constrains: WhereConstraint[] = []) {
+function prepareKeyRangeConstraints(constrains: WhereConstraint | WhereConstraint[] = []) {
     let keyRangeConstraint: {
         value?: IDBValidKey;
         valueStart?: IDBValidKey;
@@ -540,6 +554,10 @@ function prepareKeyRangeConstraints(constrains: WhereConstraint[] = []) {
         valueEnd?: IDBValidKey;
         valueEndBefore?: IDBValidKey;
     } = {};
+
+    if (!Array.isArray(constrains)) {
+        constrains = [constrains]
+    }
 
     (constrains).forEach((constrain) => {
         if (constrain.ops == '==') {
@@ -562,7 +580,7 @@ function prepareKeyRangeConstraints(constrains: WhereConstraint[] = []) {
     return keyRangeConstraint;
 }
 
-function createKeyRange(constrains: WhereConstraint[] = []): IDBKeyRange | undefined {
+function createKeyRange(constrains: WhereConstraint | WhereConstraint[] = []): IDBKeyRange | undefined {
     let { value, valueStart, valueStartAfter, valueEnd, valueEndBefore, } = prepareKeyRangeConstraints(constrains)
     let keyRange: IDBKeyRange | undefined = undefined;
     if (value) {

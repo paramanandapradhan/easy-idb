@@ -22,7 +22,7 @@ import type { StoreConstructor, WhereConstraint } from "./types";
 export class Store {
     readonly name: string;
     readonly db: IDBDatabase;
-    
+
     /**
      * 
      * @param db:  IDBDatabase instance
@@ -53,7 +53,7 @@ export class Store {
      * @returns <T>[] Return array of objects based on tht query match.
      */
     getAll<T>({ where, count }: {
-        where?: WhereConstraint[],
+        where?: WhereConstraint | WhereConstraint[],
         count?: number,
     } = {}): Promise<T[]> {
         return getAll<T>({ db: this.db, storeName: this.name, where, count })
@@ -66,7 +66,7 @@ export class Store {
      * 
      * @returns number Return count of records match the query 
      */
-    count(where?: WhereConstraint[]): Promise<number> {
+    count(where?: WhereConstraint | WhereConstraint[]): Promise<number> {
         return count({ db: this.db, storeName: this.name, where })
     }
 
@@ -91,7 +91,7 @@ export class Store {
         limit?: number,
         desc?: boolean,
         unique?: boolean,
-        where?: WhereConstraint[],
+        where?: WhereConstraint | WhereConstraint[],
         filter?: (object: any) => boolean,
         map?: (object: any) => any,
     } = {}): Promise<T[]> {

@@ -1,33 +1,26 @@
 import type { Store } from "./store";
 export type WhereOps = '==' | '>' | '>=' | '<' | '<=';
-export type  WhereConstraint = {
-    field: IDBValidKey,
+export type WhereConstraint = {
+    [field: string]: IDBValidKey,
     ops: WhereOps,
     value: IDBValidKey,
 }
 
 export type UpdateCallbackArgs = {
-    db: IDBDatabase;
-    oldVersion: number;
-    newVersion: number;
-    transaction: IDBTransaction;
+    db: IDBDatabase,
+    oldVersion: number,
+    newVersion: number,
+    transaction: IDBTransaction,
 }
 
 export type onUpgradeFn = ({ db, oldVersion, newVersion, transaction }: UpdateCallbackArgs) => void;
 
- 
- 
-
 export type RemoveIndexArgs = {
     db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
+    storeName: string,
+    indexName?: string[] | string | null | undefined,
 }
 
- 
-
- 
- 
 export type StoreType = {
     name: string,
     primaryKey: string,
@@ -51,10 +44,10 @@ export type StoreIndexType = {
     multiEntry?: boolean,
     name?: string,
     unique?: boolean,
-};
+}
 
 
- 
+
 
 export type RestoreDataType = {
     name: string,

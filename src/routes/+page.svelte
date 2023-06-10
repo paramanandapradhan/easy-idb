@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { Database, Store } from '$lib';
+	import { Database, Store, where } from '$lib';
 	import type { StoreType } from '$lib/types';
 	import { onMount } from 'svelte';
 
@@ -42,7 +42,7 @@
 	}
 
 	async function handleLoad() {
-		items = await todos.getAll();
+		items = await todos.find({ where: where('_id', '<=', 3) });
 	}
 
 	async function handleEdit(item: any) {
