@@ -39,7 +39,7 @@ export class Store {
     * 
     * @returns <T> Return object based on tht query match.
     */
-    get<T>(where: WhereConstraint[]): Promise<T> {
+    get<T>(where: WhereConstraint | WhereConstraint[]): Promise<T> {
         return get<T>({ db: this.db, storeName: this.name, where })
     }
 
