@@ -1,4 +1,10 @@
 import type { Store } from "./store";
+export type WhereOps = '==' | '>' | '>=' | '<' | '<=';
+export type  WhereConstraint = {
+    field: IDBValidKey,
+    ops: WhereOps,
+    value: IDBValidKey,
+}
 
 export type UpdateCallbackArgs = {
     db: IDBDatabase;
@@ -9,26 +15,8 @@ export type UpdateCallbackArgs = {
 
 export type onUpgradeFn = ({ db, oldVersion, newVersion, transaction }: UpdateCallbackArgs) => void;
 
-export type OpenDbArgs = {
-    name: string;
-    version: number;
-    onUpgrade?: onUpgradeFn;
-}
-
-export type CreateStoreArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    primaryKey: string;
-    autoIncrement?: boolean;
-}
-
-export type CreateIndexArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
-    unique?: boolean;
-    multiEntry?: boolean;
-}
+ 
+ 
 
 export type RemoveIndexArgs = {
     db: IDBDatabase,
@@ -36,149 +24,29 @@ export type RemoveIndexArgs = {
     indexName?: string[] | string | null | undefined;
 }
 
-export type FindArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
-    skip?: number;
-    limit?: number;
-    desc?: boolean;
-    unique?: boolean;
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-    filter?: (object: any) => boolean;
-    map?: (object: any) => any;
-}
+ 
 
-export type OpenCursorArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
-    desc?: boolean;
-    unique?: boolean;
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-    processor?: (cursor: IDBCursorWithValue) => void;
-}
-
-export type InsertArgs<T> = {
-    db: IDBDatabase,
-    storeName: string;
-    doc: T;
-}
-
-export type InserManyArgs<T> = {
-    db: IDBDatabase,
-    storeName: string,
-    docs: T[],
-}
-
-export type UpdateArgs<T> = {
-    db: IDBDatabase,
-    storeName: string;
-    doc: T;
-}
-
-export type UpdateManyArgs<T> = {
-    db: IDBDatabase,
-    storeName: string,
-    docs: T[];
-}
-
-
-export type RemoveArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    value: IDBValidKey,
-
-}
-
-export type RemoveManyArgs = {
-    db: IDBDatabase,
-    storeName: string,
-    values: IDBValidKey[],
-}
-
-export type GetStoreArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    readOnlyMode?: boolean
-}
-
-export type GetSearchArgs = {
-    indexName?: string[] | string | null | undefined;
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-}
-
-export type GetArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-}
-
-export type GetAllArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
-    desc?: boolean;
-    unique?: boolean;
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-    count?: number,
-}
-
-export type CountArgs = {
-    db: IDBDatabase,
-    storeName: string;
-    indexName?: string[] | string | null | undefined;
-    desc?: boolean;
-    unique?: boolean;
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-    count?: number,
-}
-
-export type StoreArgs = {
+ 
+ 
+export type StoreType = {
     name: string,
     primaryKey: string,
     autoIncrement?: boolean,
-    indexes?: StoreIndexArgs[] | string[],
+    indexes?: StoreIndexType[] | string[],
 }
 
-export type DatabaseConstructorArgs = {
+export type DatabaseConstructorType = {
     name: string,
     version: number,
-    stores: StoreArgs[],
+    stores: StoreType[],
 }
 
-export type StoreConstructorArgs = {
+export type StoreConstructor = {
     db: IDBDatabase,
     name: string,
-    indexName?: string[] | string | null | undefined;
 }
 
-export type StoreIndexArgs = {
+export type StoreIndexType = {
     keyPath: string | string[],
     multiEntry?: boolean,
     name?: string,
@@ -186,13 +54,9 @@ export type StoreIndexArgs = {
 };
 
 
-export type RemoveStoreArgs = {
-    db: IDBDatabase,
-    storeName: string;
+ 
 
-}
-
-export type RestoreDataArgs = {
+export type RestoreDataType = {
     name: string,
     version: number,
     date: string,
@@ -204,4 +68,4 @@ export type RestoreDataArgs = {
     ]
 }
 
-export type StoresMapArgs = { [key: string]: { store?: Store, indexStores?: { [key: string]: Store } } };
+export type StoresMapType = { [key: string]: { store?: Store, indexStores?: { [key: string]: Store } } };

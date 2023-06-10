@@ -1,20 +1,16 @@
 import type {
-    OpenDbArgs,
-    CreateIndexArgs,
-    FindArgs,
-    OpenCursorArgs,
-    InsertArgs,
-    InserManyArgs,
-    GetStoreArgs,
-    GetArgs,
-    GetAllArgs,
-    RemoveArgs,
-    RemoveManyArgs,
-    CountArgs,
-    CreateStoreArgs,
     RemoveIndexArgs,
-    RemoveStoreArgs
+    WhereConstraint,
+    onUpgradeFn
 } from "./types";
+
+export function where(constrain: WhereConstraint, constrain2?: WhereConstraint): WhereConstraint[] {
+    const constrains = [constrain];
+    if (constrain2) {
+        constrains.push(constrain2);
+    }
+    return constrains;
+}
 
 /**
  * @param name: Database name
@@ -22,7 +18,11 @@ import type {
  * @param  upgradeCallback: Register callback for every update, create a chance for db createtion or migration.
  * @returns Promise of indexed db instance
  */
-export function openDatabase({ name, version = 1, onUpgrade }: OpenDbArgs): Promise<IDBDatabase> {
+export function openDatabase({ name, version = 1, onUpgrade }: {
+    name: string;
+    version: number;
+    onUpgrade?: onUpgradeFn;
+}): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
         const req: IDBOpenDBRequest = indexedDB.open(name, version);
         req.onsuccess = () => {
@@ -47,15 +47,29 @@ export function openDatabase({ name, version = 1, onUpgrade }: OpenDbArgs): Prom
     });
 }
 
-export function createStore({ db, storeName, primaryKey, autoIncrement = false, }: CreateStoreArgs): IDBObjectStore {
+export function createStore({ db, storeName, primaryKey, autoIncrement = false, }: {
+    db: IDBDatabase,
+    storeName: string,
+    primaryKey: string,
+    autoIncrement?: boolean,
+}): IDBObjectStore {
     return db.createObjectStore(storeName, { keyPath: primaryKey, autoIncrement })
 }
 
-export function removeStore({ db, storeName, }: RemoveStoreArgs): void {
+export function removeStore({ db, storeName, }: {
+    db: IDBDatabase,
+    storeName: string,
+}): void {
     return db.deleteObjectStore(storeName)
 }
 
-export function createIndex({ db, storeName, indexName, unique = false, multiEntry = false, }: CreateIndexArgs): IDBIndex {
+export function createIndex({ db, storeName, indexName, unique = false, multiEntry = false, }: {
+    db: IDBDatabase,
+    storeName: string,
+    indexName?: string[] | string | null | undefined;
+    unique?: boolean,
+    multiEntry?: boolean,
+}): IDBIndex {
     let store = getStore({ db, storeName, readOnlyMode: false })
     let actualIndexName: string;
     if (indexName && Array.isArray(indexName)) {
@@ -88,14 +102,19 @@ export function clearStore({ db, storeName }: { db: IDBDatabase, storeName: stri
     })
 }
 
-export function openCursor({ db, storeName, indexName, desc = false, unique = false, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, processor }: OpenCursorArgs): Promise<boolean> {
+export function openCursor({ db, storeName, desc = false, unique = false, where, processor }: {
+    db: IDBDatabase,
+    storeName: string;
+    desc?: boolean;
+    unique?: boolean;
+    where?: WhereConstraint[],
+    processor?: (cursor: IDBCursorWithValue) => void;
+}): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const queryDirection = createDirection({ desc, unique });
-        const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
+        const indexName = prepareIndexNameFromConstraints(where);
+        const keyRange = createKeyRange(where);
         const store = getStore({ db, storeName });
-        if (indexName && Array.isArray(indexName)) {
-            indexName = indexName.join('-')
-        }
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).openCursor(keyRange, queryDirection);
         if (req) {
@@ -116,7 +135,17 @@ export function openCursor({ db, storeName, indexName, desc = false, unique = fa
 }
 
 
-export function find<T>({ db, storeName, indexName, skip = 0, limit = Math.pow(2, 32), desc = false, unique = false, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, filter, map, }: FindArgs): Promise<T[]> {
+export function find<T>({ db, storeName, skip = 0, limit = Math.pow(2, 32), desc = false, unique = false, where, filter, map, }: {
+    db: IDBDatabase,
+    storeName: string;
+    skip?: number;
+    limit?: number;
+    desc?: boolean;
+    unique?: boolean;
+    where?: WhereConstraint[],
+    filter?: (object: any) => boolean;
+    map?: (object: any) => any;
+}): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const items: T[] = [];
         const cursorProcessor = (cursor: IDBCursorWithValue): void => {
@@ -146,21 +175,24 @@ export function find<T>({ db, storeName, indexName, skip = 0, limit = Math.pow(2
                 resolve(items);
             }
         };
-        let isCursorOpened = openCursor({ db, storeName, indexName, desc, unique, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, processor: cursorProcessor, });
+        let isCursorOpened = openCursor({ db, storeName, desc, unique, where, processor: cursorProcessor, });
         if (!isCursorOpened) {
             resolve([]);
         }
     });
 }
 
-export function get<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, }: GetArgs): Promise<T> {
+export function get<T>({ db, storeName, where }:
+    {
+        db: IDBDatabase,
+        storeName: string;
+        where: WhereConstraint[],
+    }): Promise<T> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false })
-        if (indexName && Array.isArray(indexName)) {
-            indexName = indexName.join('-')
-        }
+        const indexName = prepareIndexNameFromConstraints(where);
         const indexeStore = indexName ? store.index(indexName) : null;
-        const req = (indexeStore || store).get(createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore, })!);
+        const req = (indexeStore || store).get(createKeyRange(where)!);
         req.onsuccess = () => {
             resolve(req.result);
         };
@@ -170,13 +202,19 @@ export function get<T>({ db, storeName, indexName, value, valueStart, valueStart
     });
 }
 
-export function getAll<T>({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore, count }: GetAllArgs): Promise<T[]> {
+export function getAll<T>({ db, storeName, where, count }: {
+    db: IDBDatabase,
+    storeName: string;
+    indexName?: string[] | string | null | undefined;
+    desc?: boolean;
+    unique?: boolean;
+    where?: WhereConstraint[],
+    count?: number,
+}): Promise<T[]> {
     return new Promise((resolve, reject) => {
-        const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
+        const keyRange = createKeyRange(where);
         const store = getStore({ db, storeName });
-        if (indexName && Array.isArray(indexName)) {
-            indexName = indexName.join('-')
-        }
+        const indexName = prepareIndexNameFromConstraints(where);
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).getAll(keyRange, count);
         req.onsuccess = () => {
@@ -188,13 +226,15 @@ export function getAll<T>({ db, storeName, indexName, value, valueStart, valueSt
     });
 }
 
-export function count({ db, storeName, indexName, value, valueStart, valueStartAfter, valueEnd, valueEndBefore }: CountArgs): Promise<number> {
+export function count({ db, storeName, where }: {
+    db: IDBDatabase,
+    storeName: string,
+    where?: WhereConstraint[],
+}): Promise<number> {
     return new Promise((resolve, reject) => {
-        const keyRange = createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore });
+        const keyRange = createKeyRange(where);
         const store = getStore({ db, storeName });
-        if (indexName && Array.isArray(indexName)) {
-            indexName = indexName.join('-')
-        }
+        const indexName = prepareIndexNameFromConstraints(where);
         const indexStore = indexName ? store.index(indexName) : null;
         let req: IDBRequest = (indexStore || store).count(keyRange);
         req.onsuccess = () => {
@@ -207,7 +247,11 @@ export function count({ db, storeName, indexName, value, valueStart, valueStartA
 }
 
 
-export function insert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
+export function insert<T>({ db, storeName, doc }: {
+    db: IDBDatabase,
+    storeName: string;
+    doc: T;
+}): Promise<T> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false })
         const req = store.add(doc);
@@ -226,7 +270,11 @@ export function insert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
     });
 }
 
-export function insertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promise<T[]> {
+export function insertMany<T>({ db, storeName, docs, }: {
+    db: IDBDatabase,
+    storeName: string,
+    docs: T[],
+}): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);
@@ -252,7 +300,11 @@ export function insertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
 
 }
 
-export function update<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
+export function update<T>({ db, storeName, doc }: {
+    db: IDBDatabase,
+    storeName: string,
+    doc: T,
+}): Promise<T> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false })
         const req = store.put(doc);
@@ -271,7 +323,11 @@ export function update<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
     });
 }
 
-export function updateMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promise<T[]> {
+export function updateMany<T>({ db, storeName, docs, }: {
+    db: IDBDatabase,
+    storeName: string,
+    docs: T[],
+}): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);
@@ -295,7 +351,11 @@ export function updateMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
     });
 }
 
-export function upsert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
+export function upsert<T>({ db, storeName, doc }: {
+    db: IDBDatabase,
+    storeName: string,
+    doc: T,
+}): Promise<T> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
@@ -329,7 +389,11 @@ export function upsert<T>({ db, storeName, doc }: InsertArgs<T>): Promise<T> {
     });
 }
 
-export function upsertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promise<T[]> {
+export function upsertMany<T>({ db, storeName, docs, }: {
+    db: IDBDatabase,
+    storeName: string,
+    docs: T[],
+}): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
@@ -377,7 +441,11 @@ export function upsertMany<T>({ db, storeName, docs, }: InserManyArgs<T>): Promi
 }
 
 
-export function remove<T>({ db, storeName, value }: RemoveArgs): Promise<T | null> {
+export function remove<T>({ db, storeName, value }: {
+    db: IDBDatabase,
+    storeName: string,
+    value: IDBValidKey,
+}): Promise<T | null> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false });
         const getRequest = store.get(value);
@@ -401,7 +469,11 @@ export function remove<T>({ db, storeName, value }: RemoveArgs): Promise<T | nul
     });
 }
 
-export function removeMany<T>({ db, storeName, values }: RemoveManyArgs): Promise<(T | null)[]> {
+export function removeMany<T>({ db, storeName, values }: {
+    db: IDBDatabase,
+    storeName: string,
+    values: IDBValidKey[],
+}): Promise<(T | null)[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
@@ -448,13 +520,50 @@ export function removeDatabase(dbName: string): Promise<string> {
 
 }
 
-function createKeyRange({ value, valueStart, valueStartAfter, valueEnd, valueEndBefore, }: {
-    value?: IDBValidKey;
-    valueStart?: IDBValidKey;
-    valueStartAfter?: IDBValidKey;
-    valueEnd?: IDBValidKey;
-    valueEndBefore?: IDBValidKey;
-}): IDBKeyRange | undefined {
+function prepareIndexNameFromConstraints(constrains: WhereConstraint[] = []) {
+    let result: IDBValidKey = '';
+
+    (constrains).forEach((constrain) => {
+        result = constrain.field;
+    })
+    if (result && Array.isArray(result)) {
+        result = result.join('-');
+    }
+    return result
+}
+
+function prepareKeyRangeConstraints(constrains: WhereConstraint[] = []) {
+    let keyRangeConstraint: {
+        value?: IDBValidKey;
+        valueStart?: IDBValidKey;
+        valueStartAfter?: IDBValidKey;
+        valueEnd?: IDBValidKey;
+        valueEndBefore?: IDBValidKey;
+    } = {};
+
+    (constrains).forEach((constrain) => {
+        if (constrain.ops == '==') {
+            keyRangeConstraint.value = constrain.value;
+        }
+        if (constrain.ops == '>') {
+            keyRangeConstraint.valueStartAfter = constrain.value;
+        }
+        if (constrain.ops == '>=') {
+            keyRangeConstraint.valueStart = constrain.value;
+        }
+        if (constrain.ops == '<') {
+            keyRangeConstraint.valueEndBefore = constrain.value;
+        }
+        if (constrain.ops == '<=') {
+            keyRangeConstraint.valueEnd = constrain.value;
+        }
+    });
+
+    return keyRangeConstraint;
+}
+
+function createKeyRange(constrains: WhereConstraint[] = []): IDBKeyRange | undefined {
+    let { value, valueStart, valueStartAfter, valueEnd, valueEndBefore, } = prepareKeyRangeConstraints(constrains)
     let keyRange: IDBKeyRange | undefined = undefined;
     if (value) {
         keyRange = IDBKeyRange.only(value);
@@ -476,7 +585,11 @@ function createDirection({ desc = false, unique = false }: {
     return direction || undefined;
 }
 
-export function getStore({ db, storeName, readOnlyMode = false }: GetStoreArgs): IDBObjectStore {
+export function getStore({ db, storeName, readOnlyMode = false }: {
+    db: IDBDatabase,
+    storeName: string,
+    readOnlyMode?: boolean,
+}): IDBObjectStore {
     const tx = db.transaction(storeName, readOnlyMode ? 'readonly' : 'readwrite');
     return tx.objectStore(storeName);
 }

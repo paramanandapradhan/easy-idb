@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { Database, Store } from '$lib';
-	import type { StoreArgs } from '$lib/types';
+	import type { StoreType } from '$lib/types';
 	import { onMount } from 'svelte';
 
 	let todo: any;
@@ -9,7 +9,7 @@
 	let task = '';
 	let db: Database | null = null;
 	let version = 7;
-	let stores: StoreArgs[] = [
+	let stores: StoreType[] = [
 		{ name: 'todos', primaryKey: '_id', autoIncrement: true },
 		{ name: 'users', primaryKey: '_id', autoIncrement: true, indexes: ['updatedAt'] }
 	];
