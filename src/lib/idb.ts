@@ -539,8 +539,8 @@ function prepareIndexNameFromConstraints(store: IDBObjectStore, constrains: Wher
     if (store.keyPath == indexName) {
         // primary key should not provide any indexName
         indexName = '';
-    } else if (!store.indexNames.contains(indexName)) {
-        throw Error('Index not found! ' + field);
+    } else if (indexName && !store.indexNames.contains(indexName)) {
+        throw Error(`Store '${store.name}' Index '${field}' not found!`);
     }
 
     return indexName
