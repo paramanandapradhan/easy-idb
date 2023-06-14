@@ -157,17 +157,17 @@ export class Store {
      * @param value indexKeyValue
      * @returns <string> Return provided indexKeyValue when success delete 
      */
-    remove<T>({ value }: { value: IDBValidKey }): Promise<T | null> {
-        return remove<T>({ db: this.db, storeName: this.name, value })
+    remove<T>(  primaryKeyValue: IDBValidKey  ): Promise<T | null> {
+        return remove<T>({ db: this.db, storeName: this.name, primaryKeyValue })
     }
 
     /**
      * Remove multiple objects to the store provided primary index values.
-     * @param values indexKeyValues
+     * @param primaryKeyValues indexKeyValues
      * @returns <string> Return provided indexKeyValues when success delete 
      */
-    removeMany<T>({ values }: { values: IDBValidKey[] }): Promise<(T | null)[]> {
-        return removeMany<T>({ db: this.db, storeName: this.name, values })
+    removeMany<T>(primaryKeyValues: IDBValidKey[] ): Promise<(T | null)[]> {
+        return removeMany<T>({ db: this.db, storeName: this.name, primaryKeyValues })
     }
 
     /**

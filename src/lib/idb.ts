@@ -438,18 +438,18 @@ export function upsertMany<T>({ db, storeName, docs, }: {
 }
 
 
-export function remove<T>({ db, storeName, value }: {
+export function remove<T>({ db, storeName, primaryKeyValue }: {
     db: IDBDatabase,
     storeName: string,
-    value: IDBValidKey,
+    primaryKeyValue: IDBValidKey,
 }): Promise<T | null> {
     return new Promise((resolve, reject) => {
         const store = getStore({ db, storeName, readOnlyMode: false });
-        const getRequest = store.get(value);
+        const getRequest = store.get(primaryKeyValue);
         getRequest.onsuccess = () => {
             const result: T = getRequest.result;
             if (result) {
-                const delReq = store.delete(value);
+                const delReq = store.delete(primaryKeyValue);
                 delReq.onsuccess = () => {
                     resolve(result);
                 };
@@ -466,16 +466,16 @@ export function remove<T>({ db, storeName, value }: {
     });
 }
 
-export function removeMany<T>({ db, storeName, values }: {
+export function removeMany<T>({ db, storeName, primaryKeyValues }: {
     db: IDBDatabase,
     storeName: string,
-    values: IDBValidKey[],
+    primaryKeyValues: IDBValidKey[],
 }): Promise<(T | null)[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
         const results: (T | null)[] = [];
-        (values).forEach((value) => {
+        (primaryKeyValues).forEach((value) => {
             const getReq = store.get(value);
             getReq.onsuccess = () => {
                 const result: T = getReq.result;
