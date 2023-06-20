@@ -5,9 +5,10 @@ import type {
     onUpgradeFn
 } from "./types";
 
-export function where(field: IDBValidKey, ops: WhereOps, value: IDBValidKey): WhereConstraint {
+function where(field: IDBValidKey, ops: WhereOps, value: IDBValidKey): WhereConstraint {
     return { field, ops, value };
 }
+export { where, where as IdbWhere };
 
 /**
  * @param name: Database name

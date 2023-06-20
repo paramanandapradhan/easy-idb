@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { Database, Store, where } from '$lib';
-	import type { StoreType } from '$lib/types';
+	import { Database, Store, where, type StoreDefinitionType } from '$lib';
 	import { onMount } from 'svelte';
 
 	let todo: any;
@@ -9,7 +8,7 @@
 	let task = '';
 	let db: Database | null = null;
 	let version = 7;
-	let stores: StoreType[] = [
+	let stores: StoreDefinitionType[] = [
 		{ name: 'todos', primaryKey: '_id', autoIncrement: true },
 		{ name: 'users', primaryKey: '_id', autoIncrement: true, indexes: ['updatedAt'] }
 	];
@@ -22,7 +21,7 @@
 			console.log({ db, oldVersion, newVersion });
 		});
 		console.log('Db opened', results);
-		todos = results.todos.store!;
+		todos = results.todos!;
 		console.log(results);
 	}
 
@@ -42,7 +41,7 @@
 	}
 
 	async function handleLoad() {
-		items = await todos.find({ where: where('_id', '<=', 3) });
+		items = await todos.find({});
 	}
 
 	async function handleEdit(item: any) {

@@ -1,31 +1,51 @@
 import { createStore, find, insertMany, openDatabase, removeDatabase, removeStore, getStore } from "./idb";
 import { Store } from "./store";
-import type { DatabaseConstructorType, RestoreDataType, StoreIndexType, StoreType, StoresMapType, onUpgradeFn, } from "./types";
+import type { RestoreDataType, StoreDefinitionType, StoreIndexDefinitionType, onUpgradeFn, } from "./types";
 
 export class Database {
     readonly name: string;
     readonly version: number;
     readonly isReady: Promise<IDBDatabase>;
 
-    private stores: StoreType[];
-    private storesMap: StoresMapType = {};
+    private storeDefinitions: StoreDefinitionType[];
+    private storesMap: { [key: string]: Store } = {};
     private db: IDBDatabase | null = null;
     private isReadyResolve: Function = () => { };
     private isReadyReject: Function = () => { };
     private isSchemaReady: boolean = false;
 
 
-    constructor({ name, version, stores }: DatabaseConstructorType) {
+    constructor({ name, version, stores }: {
+        name: string,
+        version: number,
+        stores: StoreDefinitionType[],
+    }) {
         this.name = name;
         this.version = version;
-        this.stores = stores;
+        this.storeDefinitions = JSON.parse(JSON.stringify(stores || []));
         this.isReady = new Promise((resolve, rejecte) => {
             this.isReadyResolve = resolve;
             this.isReadyReject = rejecte;
         })
+        this.storeDefinitions.forEach((storeDefinition) => {
+            // Prepare string index names to structured format
+            storeDefinition.indexes = (storeDefinition.indexes || []).map((index: string | StoreIndexDefinitionType) => {
+                if (typeof index == 'string') {
+                    return { name: index, keyPath: index } as StoreIndexDefinitionType
+                }
+                if (!index.name) {
+                    if (index.keyPath && Array.isArray(index.keyPath)) {
+                        index.name = index.keyPath.join('-');
+                    } else {
+                        index.name = index.keyPath;
+                    }
+                }
+                return index as StoreIndexDefinitionType;
+            });
+        })
     }
 
-    async openDatabase(onUpgrade?: onUpgradeFn): Promise<StoresMapType> {
+    async openDatabase(onUpgrade?: onUpgradeFn): Promise<{ [storeName: string]: Store }> {
         try {
             this.db = await openDatabase({
                 name: this.name, version: this.version,
@@ -33,36 +53,22 @@ export class Database {
                     if (!this.isSchemaReady) {
                         this.isSchemaReady = true;
 
-                        this.stores.forEach((item: StoreType) => {
-                            const storeName = item.name;
+                        this.storeDefinitions.forEach((storeDefinition: StoreDefinitionType) => {
+                            const storeName = storeDefinition.name;
                             let store: IDBObjectStore;
-                            if (!db.objectStoreNames.contains(item.name)) {
-                                store = createStore({ db, storeName, primaryKey: item.primaryKey, autoIncrement: item.autoIncrement });
+                            if (!db.objectStoreNames.contains(storeDefinition.name)) {
+                                store = createStore({ db, storeName, primaryKey: storeDefinition.primaryKey, autoIncrement: storeDefinition.autoIncrement });
                             } else {
                                 store = transaction.objectStore(storeName)
                             }
 
-                            // Prepare string index names to structured format
-                            let indexes = (item.indexes || []).map((index: string | StoreIndexType) => {
-                                if (typeof index == 'string') {
-                                    return { name: index, keyPath: index } as StoreIndexType
-                                }
-                                if (!index.name) {
-                                    if (index.keyPath && Array.isArray(index.keyPath)) {
-                                        index.name = index.keyPath.join('-');
-                                    } else {
-                                        index.name = index.keyPath;
-                                    }
-                                }
-                                return index as StoreIndexType;
-                            })
 
                             // Remove indexes
-                            let indexSet: Set<string> = new Set(indexes.map((index: StoreIndexType) => index.name!));
+                            let indexSet: Set<string> = new Set(((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).map((indexDefinition: StoreIndexDefinitionType) => indexDefinition.name!));
                             const indexNames = store.indexNames || [];
                             for (let i = 0; i < indexNames.length; i++) {
                                 let indexName = indexNames[i];
-                                if (indexName && indexName != item.primaryKey) {
+                                if (indexName && indexName != storeDefinition.primaryKey) {
                                     if (!indexSet.has(indexName)) {
                                         store.deleteIndex(indexName);
                                     }
@@ -70,9 +76,9 @@ export class Database {
                             }
 
                             // Create indexes 
-                            indexes.forEach((index) => {
-                                if (!store.indexNames.contains(index.name!)) {
-                                    store.createIndex(index.name!, index.keyPath, { unique: index.unique, multiEntry: index.multiEntry })
+                            ((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).forEach((indexDefinition: StoreIndexDefinitionType) => {
+                                if (!store.indexNames.contains(indexDefinition.name!)) {
+                                    store.createIndex(indexDefinition.name!, indexDefinition.keyPath, { unique: indexDefinition.unique, multiEntry: indexDefinition.multiEntry })
                                 }
                             });
                         });
@@ -88,18 +94,16 @@ export class Database {
         }
 
         if (this.db) {
-            await Promise.all(this.stores.map(async (store: StoreType) => {
-                this.storesMap[store.name] = { indexStores: {} };
-                let storeMap = this.storesMap[store.name];
-                storeMap.store = new Store({ db: this.db!, name: store.name });
-                let objectStore = getStore({ db: this.db!, storeName: store.name });
+            await Promise.all(this.storeDefinitions.map(async (storeDefinition: StoreDefinitionType) => {
+
+                this.storesMap[storeDefinition.name] = new Store({ db: this.db!, name: storeDefinition.name });
+                let objectStore = getStore({ db: this.db!, storeName: storeDefinition.name });
                 if (objectStore) {
-                    for (let i = 0; i < objectStore.indexNames.length; i++) {
-                        let indexName = objectStore.indexNames[i];
-                        if (indexName) {
-                            storeMap.indexStores![indexName] = new Store({ db: this.db!, name: store.name })
+                    ((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).forEach((indexDefination: StoreIndexDefinitionType) => {
+                        if (!objectStore.indexNames.contains(indexDefination.name!)) {
+                            throw new Error(`Index '${indexDefination.name}' not found in Store '${storeDefinition.name}'!`);
                         }
-                    }
+                    });
                 }
             }));
         }
@@ -112,7 +116,7 @@ export class Database {
     }
 
     getStore(name: string): Store | undefined {
-        return this.storesMap[name].store;
+        return this.storesMap[name];
     }
 
     removeStore(name: string): void {

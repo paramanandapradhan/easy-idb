@@ -21,25 +21,21 @@ export type RemoveIndexArgs = {
     indexName?: string[] | string | null | undefined,
 }
 
-export type StoreType = {
+export type StoreDefinitionType = {
     name: string,
     primaryKey: string,
     autoIncrement?: boolean,
-    indexes?: StoreIndexType[] | string[],
+    indexes?: StoreIndexDefinitionType[] | string[],
 }
 
-export type DatabaseConstructorType = {
-    name: string,
-    version: number,
-    stores: StoreType[],
-}
+
 
 export type StoreConstructor = {
     db: IDBDatabase,
     name: string,
 }
 
-export type StoreIndexType = {
+export type StoreIndexDefinitionType = {
     keyPath: string | string[],
     multiEntry?: boolean,
     name?: string,
@@ -61,4 +57,4 @@ export type RestoreDataType = {
     ]
 }
 
-export type StoresMapType = { [key: string]: { store?: Store, indexStores?: { [key: string]: Store } } };
+ 
