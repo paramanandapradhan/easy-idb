@@ -1,4 +1,5 @@
-import { createStore, find, insertMany, openDatabase, removeDatabase, removeStore, getStore } from "./idb";
+
+import { createStore, find, openDatabase, removeDatabase, removeStore, getStore, insert } from "./idb";
 import { Store } from "./store";
 import type { RestoreDataType, StoreDefinitionType, StoreIndexDefinitionType, onUpgradeFn, } from "./types";
 
@@ -62,7 +63,6 @@ export class Database {
                                 store = transaction.objectStore(storeName)
                             }
 
-
                             // Remove indexes
                             let indexSet: Set<string> = new Set(((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).map((indexDefinition: StoreIndexDefinitionType) => indexDefinition.name!));
                             const indexNames = store.indexNames || [];
@@ -99,8 +99,8 @@ export class Database {
                 }
                 let objectStore = getStore({ db: this.db!, storeName: storeDefinition.name });
                 if (objectStore) {
-                    ((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).forEach((indexDefination: StoreIndexDefinitionType) => {
-                        if (!objectStore.indexNames.contains(indexDefination.name!)) {
+                    ((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).forEach((indexDefinition: StoreIndexDefinitionType) => {
+                        if (!objectStore.indexNames.contains(indexDefinition.name!)) {
                             throw new Error(`The index '${indexDefinition.name}' does not exist in the store '${storeDefinition.name}'! Please verify the store definition or upgrade the database version.`);
                         }
                     });
@@ -144,7 +144,7 @@ export class Database {
     async restore(data: RestoreDataType): Promise<void> {
         if (this.db && data && data.version && data.name && data.stores) {
             await Promise.all(data.stores.map(async (store) => {
-                await insertMany({ db: this.db!, storeName: store.name, docs: store.docs })
+                await insert({ db: this.db!, storeName: store.name, data: store.docs })
             }));
         }
     }

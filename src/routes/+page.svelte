@@ -33,7 +33,7 @@
 				console.log(await todos.upsert({ task }));
 			} else {
 				todo.task = task;
-				console.log(await todos.upsertMany([todo]));
+				console.log(await todos.upsert([todo]));
 			}
 		}
 		task = '';
@@ -42,7 +42,7 @@
 	}
 
 	async function handleLoad() {
-		items = await todos.find({ where: IdbWhere('_id', '<', 5) });
+		items = await todos.find({});
 	}
 
 	async function handleEdit(item: any) {

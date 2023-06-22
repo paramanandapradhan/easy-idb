@@ -4,12 +4,8 @@ import {
     getAll,
     find,
     update,
-    updateMany,
     remove,
-    removeMany,
     insert,
-    insertMany,
-    upsertMany,
     upsert,
     clearStore,
 } from "./idb";
@@ -100,74 +96,39 @@ export class Store {
 
     /**
      * Insert a object to the store.
-     * @param doc Insertable document
+     * @param data Insertable documents
      * @returns <T> Return created object
      */
-    insert<T>(doc: T): Promise<T> {
-        return insert<T>({ db: this.db, storeName: this.name, doc });
-    }
-
-    /**
-     * Insert multiple objects to the store.
-     * @param docs Insertable documents
-     * @returns <T>[] Return created object
-     */
-    insertMany<T>(docs: T[]): Promise<T[]> {
-        return insertMany<T>({ db: this.db, storeName: this.name, docs });
+    insert<T>(data: T|T[]): Promise<T[]> {
+        return insert<T>({ db: this.db, storeName: this.name, data });
     }
 
     /**
      * Update a object to the store.
-     * @param doc Updateable document
+     * @param data Updateable documents
      * @returns <T> Return upddated object
      */
-    update<T>(doc: T): Promise<T> {
-        return update<T>({ db: this.db, storeName: this.name, doc });
-    }
-
-    /**
-     * Update multiple objects to the store.
-     * @param docs Updateable documents
-     * @returns <T>[] Return updated objects
-     */
-    updateMany<T>(docs: T[]): Promise<T[]> {
-        return updateMany<T>({ db: this.db, storeName: this.name, docs });
-    }
-
-    /**
-     * Upsert a object to the store.
-     * @param doc Updateable document
-     * @returns <T> Return upddated object
-     */
-    upsert<T>(doc: T): Promise<T> {
-        return upsert<T>({ db: this.db, storeName: this.name, doc });
+    update<T>(data: T|T[]): Promise<T[]> {
+        return update<T>({ db: this.db, storeName: this.name, data });
     }
 
     /**
      * Upsert multiple objects to the store.
-     * @param docs Updateable documents
+     * @param data Updateable documents
      * @returns <T>[] Return updated objects
      */
-    upsertMany<T>(docs: T[]): Promise<T[]> {
-        return upsertMany<T>({ db: this.db, storeName: this.name, docs });
+    upsert<T>(data: T|T[]): Promise<T[]> {
+        return upsert<T>({ db: this.db, storeName: this.name, data });
     }
 
-    /**
-     * Remove a object to the store provided primary index value.
-     * @param value indexKeyValue
-     * @returns <string> Return provided indexKeyValue when success delete 
-     */
-    remove<T>(  primaryKeyValue: IDBValidKey  ): Promise<T | null> {
-        return remove<T>({ db: this.db, storeName: this.name, primaryKeyValue })
-    }
 
     /**
      * Remove multiple objects to the store provided primary index values.
      * @param primaryKeyValues indexKeyValues
      * @returns <string> Return provided indexKeyValues when success delete 
      */
-    removeMany<T>(primaryKeyValues: IDBValidKey[] ): Promise<(T | null)[]> {
-        return removeMany<T>({ db: this.db, storeName: this.name, primaryKeyValues })
+    remove<T>(data?: IDBValidKey[], where?: WhereConstraint | WhereConstraint[]): Promise<(T | null)[]> {
+        return remove<T>({ db: this.db, storeName: this.name, data, where })
     }
 
     /**

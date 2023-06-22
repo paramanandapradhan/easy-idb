@@ -244,34 +244,10 @@ export function count({ db, storeName, where }: {
     });
 }
 
-
-export function insert<T>({ db, storeName, doc }: {
-    db: IDBDatabase,
-    storeName: string;
-    doc: T;
-}): Promise<T> {
-    return new Promise((resolve, reject) => {
-        const store = getStore({ db, storeName, readOnlyMode: false })
-        const req = store.add(doc);
-        req.onsuccess = () => {
-            let getReq = store.get(req.result);
-            getReq.onsuccess = () => {
-                resolve(getReq.result);
-            }
-            getReq.onerror = () => {
-                reject('Error on insert and get: ' + getReq.error);
-            }
-        };
-        req.onerror = () => {
-            reject('Error on insert: ' + req.error);
-        };
-    });
-}
-
-export function insertMany<T>({ db, storeName, docs, }: {
+export function insert<T>({ db, storeName, data }: {
     db: IDBDatabase,
     storeName: string,
-    docs: T[],
+    data: T | T[],
 }): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
@@ -284,6 +260,7 @@ export function insertMany<T>({ db, storeName, docs, }: {
             reject('Error insert many ' + transaction.error)
         };
 
+        let docs = Array.isArray(data) ? data : [data];
         (docs || []).forEach((object: any) => {
             let addReq = store.add(object);
             addReq.onsuccess = () => {
@@ -298,33 +275,10 @@ export function insertMany<T>({ db, storeName, docs, }: {
 
 }
 
-export function update<T>({ db, storeName, doc }: {
+export function update<T>({ db, storeName, data }: {
     db: IDBDatabase,
     storeName: string,
-    doc: T,
-}): Promise<T> {
-    return new Promise((resolve, reject) => {
-        const store = getStore({ db, storeName, readOnlyMode: false })
-        const req = store.put(doc);
-        req.onsuccess = () => {
-            let getReq = store.get(req.result);
-            getReq.onsuccess = () => {
-                resolve(getReq.result);
-            }
-            getReq.onerror = () => {
-                reject('Error on update and get: ' + getReq.error);
-            }
-        };
-        req.onerror = () => {
-            reject('Error on update: ' + req.error);
-        };
-    });
-}
-
-export function updateMany<T>({ db, storeName, docs, }: {
-    db: IDBDatabase,
-    storeName: string,
-    docs: T[],
+    data: T | T[],
 }): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
@@ -336,6 +290,8 @@ export function updateMany<T>({ db, storeName, docs, }: {
         transaction.onerror = () => {
             reject('Error update many: ' + transaction.error)
         };
+
+        let docs = Array.isArray(data) ? data : [data];
         (docs || []).forEach((object: any) => {
             let putReq = store.put(object);
             putReq.onsuccess = () => {
@@ -349,48 +305,10 @@ export function updateMany<T>({ db, storeName, docs, }: {
     });
 }
 
-export function upsert<T>({ db, storeName, doc }: {
+export function upsert<T>({ db, storeName, data }: {
     db: IDBDatabase,
     storeName: string,
-    doc: T,
-}): Promise<T> {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction(storeName, 'readwrite');
-        const store = transaction.objectStore(storeName);
-
-
-        const onSuccess = (event: any) => {
-            const getRequest = store.get(event.target.result);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-            getRequest.onerror = () => reject(`Error on upsert get: ${getRequest.error}`);
-        };
-
-        const onError = (action: any) => (event: any) => {
-            reject(`Error on upsert ${action}: ${event.target.error}`);
-            transaction.abort();
-        };
-
-        const primaryKey = (doc as any)[(store as any).keyPath];
-        if (primaryKey) {
-            const getReq = store.get(primaryKey);
-            getReq.onsuccess = () => {
-                const request = getReq.result ? store.put(doc) : store.add(doc);
-                request.onsuccess = onSuccess;
-                request.onerror = onError(getReq.result ? 'put' : 'add');
-            };
-            getReq.onerror = onError('get');
-        } else {
-            const addReq = store.add(doc);
-            addReq.onsuccess = onSuccess;
-            addReq.onerror = onError('add');
-        }
-    });
-}
-
-export function upsertMany<T>({ db, storeName, docs, }: {
-    db: IDBDatabase,
-    storeName: string,
-    docs: T[],
+    data: T | T[],
 }): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readwrite');
@@ -401,7 +319,7 @@ export function upsertMany<T>({ db, storeName, docs, }: {
         let isTransactionAborted = false;
 
         transaction.oncomplete = () => resolve(results);
-        transaction.onerror = () => reject(`Error update many: ${transaction.error}`);
+        transaction.onerror = () => reject(`Error on upsert: ${transaction.error}`);
 
         const onSuccess = (event: any) => {
             const getRequest = store.get(event.target.result);
@@ -419,7 +337,8 @@ export function upsertMany<T>({ db, storeName, docs, }: {
             }
         };
 
-        docs.forEach((doc: any) => {
+        let docs = Array.isArray(data) ? data : [data];
+        (docs || []).forEach((doc: any) => {
             const primaryKey = (doc)[(store as any).keyPath];
             if (primaryKey) {
                 const getReq = store.get(primaryKey);
@@ -438,58 +357,50 @@ export function upsertMany<T>({ db, storeName, docs, }: {
     });
 }
 
-
-export function remove<T>({ db, storeName, primaryKeyValue }: {
+export function remove<T>({ db, storeName, data, where }: {
     db: IDBDatabase,
     storeName: string,
-    primaryKeyValue: IDBValidKey,
-}): Promise<T | null> {
-    return new Promise((resolve, reject) => {
-        const store = getStore({ db, storeName, readOnlyMode: false });
-        const getRequest = store.get(primaryKeyValue);
-        getRequest.onsuccess = () => {
-            const result: T = getRequest.result;
-            if (result) {
-                const delReq = store.delete(primaryKeyValue);
-                delReq.onsuccess = () => {
-                    resolve(result);
-                };
-                delReq.onerror = () => {
-                    reject('Error on get and remove : ' + delReq.error);
-                };
-            } else {
-                resolve(null)
-            }
-        };
-        getRequest.onerror = () => {
-            reject("Error on delete : " + getRequest.error);
-        };
-    });
-}
-
-export function removeMany<T>({ db, storeName, primaryKeyValues }: {
-    db: IDBDatabase,
-    storeName: string,
-    primaryKeyValues: IDBValidKey[],
+    data?: IDBValidKey[],
+    where?: WhereConstraint | WhereConstraint[],
 }): Promise<(T | null)[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
+        let primaryKey = store.keyPath;
+        if (Array.isArray(primaryKey)) {
+            primaryKey = primaryKey.join('-');
+        }
         const results: (T | null)[] = [];
-        (primaryKeyValues).forEach((value) => {
-            const getReq = store.get(value);
-            getReq.onsuccess = () => {
-                const result: T = getReq.result;
-                if (result) {
-                    const delReq = store.delete(value);
+        if (where) {
+            const indexName = prepareIndexNameFromConstraints(store, where);
+            const indexeStore = indexName ? store.index(indexName) : null;
+            const req = (indexeStore || store).getAll(createKeyRange(where)!);
+            req.onsuccess = () => {
+                (req.result || []).map((result) => {
+                    const delReq = store.delete(result[primaryKey as string]);
                     delReq.onsuccess = () => {
                         results.push(result);
                     };
-                } else {
-                    results.push(null);
-                }
+                });
             };
-        })
+        }
+
+        let docs = Array.isArray(data) ? data : [data];
+        if (docs) {
+            (docs || []).forEach((value) => {
+                const getReq = store.get(value!);
+                getReq.onsuccess = () => {
+                    const result: T = getReq.result;
+                    if (result) {
+                        const delReq = store.delete(value!);
+                        delReq.onsuccess = () => {
+                            results.push(result);
+                        };
+                    }
+                };
+            })
+        }
+
         transaction.oncomplete = () => {
             resolve(results);
         };
