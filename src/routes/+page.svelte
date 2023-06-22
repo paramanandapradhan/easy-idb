@@ -52,7 +52,7 @@
 
 	async function handleDelete(item: any) {
 		console.log(item._id);
-		todos.remove(item._id);
+		todos.remove({ where: IdbWhere('_id', '==', item._id) });
 		todo = null;
 		handleLoad();
 	}

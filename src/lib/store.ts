@@ -99,7 +99,7 @@ export class Store {
      * @param data Insertable documents
      * @returns <T> Return created object
      */
-    insert<T>(data: T|T[]): Promise<T[]> {
+    insert<T>(data: T | T[]): Promise<T[]> {
         return insert<T>({ db: this.db, storeName: this.name, data });
     }
 
@@ -108,7 +108,7 @@ export class Store {
      * @param data Updateable documents
      * @returns <T> Return upddated object
      */
-    update<T>(data: T|T[]): Promise<T[]> {
+    update<T>(data: T | T[]): Promise<T[]> {
         return update<T>({ db: this.db, storeName: this.name, data });
     }
 
@@ -117,7 +117,7 @@ export class Store {
      * @param data Updateable documents
      * @returns <T>[] Return updated objects
      */
-    upsert<T>(data: T|T[]): Promise<T[]> {
+    upsert<T>(data: T | T[]): Promise<T[]> {
         return upsert<T>({ db: this.db, storeName: this.name, data });
     }
 
@@ -127,8 +127,8 @@ export class Store {
      * @param primaryKeyValues indexKeyValues
      * @returns <string> Return provided indexKeyValues when success delete 
      */
-    remove<T>(data?: IDBValidKey[], where?: WhereConstraint | WhereConstraint[]): Promise<(T | null)[]> {
-        return remove<T>({ db: this.db, storeName: this.name, data, where })
+    remove<T>(data: IDBValidKey | IDBValidKey[] | { data?: IDBValidKey | IDBValidKey[], where?: WhereConstraint | WhereConstraint[] }): Promise<(T | null)[]> {
+        return remove<T>({ db: this.db, storeName: this.name, data  })
     }
 
     /**

@@ -68,8 +68,12 @@ await todos.update({ _id: 1, task: 'Task First' });
 
 await todos.update([{ _id: 1, task: 'Task First' }, { _id: 2, task: 'Task Second' }]);
 
+await todos.upsert({ _id: 1, task: 'Task First' });
+
+await todos.remove(1); // Remove record from store with _id = 1
+await todos.remove([1, 2]); // Remove record from store with _id = 1, 2
 await todos.remove({data: 1}); // Remove record from store with _id = 1
-await todos.remove({ data: [1, 2], where: IdbWhere('_id', '>=', 1) }); // Remove multiple records from stores.
+await todos.remove({ data: [1, 2], where: IdbWhere('_id', '==', 3) }); // Remove multiple records from stores.
 
 ```
 

@@ -260,7 +260,7 @@ export function insert<T>({ db, storeName, data }: {
             reject('Error insert many ' + transaction.error)
         };
 
-        let docs = Array.isArray(data) ? data : [data];
+        let docs = Array.isArray(data) ? data : data ? [data] : null;
         (docs || []).forEach((object: any) => {
             let addReq = store.add(object);
             addReq.onsuccess = () => {
@@ -291,7 +291,7 @@ export function update<T>({ db, storeName, data }: {
             reject('Error update many: ' + transaction.error)
         };
 
-        let docs = Array.isArray(data) ? data : [data];
+        let docs = Array.isArray(data) ? data : data ? [data] : null;
         (docs || []).forEach((object: any) => {
             let putReq = store.put(object);
             putReq.onsuccess = () => {
@@ -337,7 +337,7 @@ export function upsert<T>({ db, storeName, data }: {
             }
         };
 
-        let docs = Array.isArray(data) ? data : [data];
+        let docs = Array.isArray(data) ? data : data ? [data] : null;
         (docs || []).forEach((doc: any) => {
             const primaryKey = (doc)[(store as any).keyPath];
             if (primaryKey) {
@@ -357,13 +357,20 @@ export function upsert<T>({ db, storeName, data }: {
     });
 }
 
-export function remove<T>({ db, storeName, data, where }: {
+export function remove<T>({ db, storeName, data }: {
     db: IDBDatabase,
     storeName: string,
-    data?: IDBValidKey[],
-    where?: WhereConstraint | WhereConstraint[],
+    data: IDBValidKey | IDBValidKey[] | { data?: IDBValidKey | IDBValidKey[], where?: WhereConstraint | WhereConstraint[] }
 }): Promise<(T | null)[]> {
     return new Promise((resolve, reject) => {
+        let _where = null;
+        let _data = null;
+        if ((data as any).where) {
+            _where = (data as any).where;
+            _data = (data as any).data;
+        } else {
+            _data = (data as any).data || data;
+        }
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
         let primaryKey = store.keyPath;
@@ -371,10 +378,12 @@ export function remove<T>({ db, storeName, data, where }: {
             primaryKey = primaryKey.join('-');
         }
         const results: (T | null)[] = [];
-        if (where) {
-            const indexName = prepareIndexNameFromConstraints(store, where);
+
+
+        if (_where) {
+            const indexName = prepareIndexNameFromConstraints(store, _where);
             const indexeStore = indexName ? store.index(indexName) : null;
-            const req = (indexeStore || store).getAll(createKeyRange(where)!);
+            const req = (indexeStore || store).getAll(createKeyRange(_where)!);
             req.onsuccess = () => {
                 (req.result || []).map((result) => {
                     const delReq = store.delete(result[primaryKey as string]);
@@ -385,7 +394,7 @@ export function remove<T>({ db, storeName, data, where }: {
             };
         }
 
-        let docs = Array.isArray(data) ? data : [data];
+        let docs = Array.isArray(_data) ? _data : _data ? [_data] : null;
         if (docs) {
             (docs || []).forEach((value) => {
                 const getReq = store.get(value!);
