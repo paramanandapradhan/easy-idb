@@ -68,10 +68,8 @@ export class Database {
                             const indexNames = store.indexNames || [];
                             for (let i = 0; i < indexNames.length; i++) {
                                 let indexName = indexNames[i];
-                                if (indexName && indexName != storeDefinition.primaryKey) {
-                                    if (!indexSet.has(indexName)) {
-                                        store.deleteIndex(indexName);
-                                    }
+                                if (indexName && !indexSet.has(indexName)) {
+                                    store.deleteIndex(indexName);
                                 }
                             }
 
@@ -95,13 +93,15 @@ export class Database {
 
         if (this.db) {
             await Promise.all(this.storeDefinitions.map(async (storeDefinition: StoreDefinitionType) => {
-
                 this.storesMap[storeDefinition.name] = new Store({ db: this.db!, name: storeDefinition.name });
+                if (!this.db?.objectStoreNames.contains(storeDefinition.name)) {
+                    throw new Error(`The store '${storeDefinition.name}' does not exist! Please verify the store definition or upgrade the database version.`);
+                }
                 let objectStore = getStore({ db: this.db!, storeName: storeDefinition.name });
                 if (objectStore) {
                     ((storeDefinition.indexes || []) as StoreIndexDefinitionType[]).forEach((indexDefination: StoreIndexDefinitionType) => {
                         if (!objectStore.indexNames.contains(indexDefination.name!)) {
-                            throw new Error(`Index '${indexDefination.name}' not found in Store '${storeDefinition.name}'!`);
+                            throw new Error(`The index '${indexDefinition.name}' does not exist in the store '${storeDefinition.name}'! Please verify the store definition or upgrade the database version.`);
                         }
                     });
                 }

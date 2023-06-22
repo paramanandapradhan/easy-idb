@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { Database, Store, where, type StoreDefinitionType } from '$lib';
+	import { Database, Store, where, type StoreDefinitionType, IdbWhere } from '$lib';
 	import { onMount } from 'svelte';
 
 	let todo: any;
 	let items: any[] = [];
 	let task = '';
 	let db: Database | null = null;
-	let version = 7;
+	let version = 3;
 	let stores: StoreDefinitionType[] = [
+		{ name: 'tags', primaryKey: '_id', autoIncrement: true },
 		{ name: 'todos', primaryKey: '_id', autoIncrement: true },
-		{ name: 'users', primaryKey: '_id', autoIncrement: true, indexes: ['updatedAt'] }
+		{ name: 'users', primaryKey: '_id', autoIncrement: true, indexes: ['updatedAt', 'name'] }
 	];
 
 	let todos: Store;
@@ -41,7 +42,7 @@
 	}
 
 	async function handleLoad() {
-		items = await todos.find({});
+		items = await todos.find({ where: IdbWhere('_id', '<', 5) });
 	}
 
 	async function handleEdit(item: any) {
