@@ -43,7 +43,9 @@ export type StoreIndexDefinitionType = {
 }
 
 
-
+export type UpdateOptionsType = {
+   merge?: boolean  
+}
 
 export type RestoreDataType = {
     name: string,

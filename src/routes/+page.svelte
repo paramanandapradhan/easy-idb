@@ -24,6 +24,7 @@
 		console.log('Db opened', results);
 		todos = results.todos!;
 		console.log(results);
+		console.log('todo 7 ', await todos.get(IdbWhere('_id', '==', 7)));
 	}
 
 	async function handleSave() {
@@ -33,7 +34,7 @@
 				console.log(await todos.upsert({ task }));
 			} else {
 				todo.task = task;
-				console.log(await todos.upsert([todo]));
+				console.log(await todos.update(todo, { merge: true }));
 			}
 		}
 		task = '';

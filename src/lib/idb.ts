@@ -1,5 +1,6 @@
 import type {
     RemoveIndexArgs,
+    UpdateOptionsType,
     WhereConstraint,
     WhereOps,
     onUpgradeFn
@@ -275,14 +276,16 @@ export function insert<T>({ db, storeName, data }: {
 
 }
 
-export function update<T>({ db, storeName, data }: {
+export function update<T>({ db, storeName, data, options = {} }: {
     db: IDBDatabase,
     storeName: string,
     data: T | T[],
+    options: UpdateOptionsType
 }): Promise<T[]> {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);
+        let primaryKey: string = store.keyPath as string;
         let results: T[] = [];
         transaction.oncomplete = () => {
             resolve(results);
@@ -291,17 +294,29 @@ export function update<T>({ db, storeName, data }: {
             reject('Error update many: ' + transaction.error)
         };
 
+        let onSuccess = (event: any) => {
+            let getReq = store.get(event.target.result);
+            getReq.onsuccess = () => {
+                results.push(getReq.result);
+            }
+        }
+
         let docs = Array.isArray(data) ? data : data ? [data] : null;
-        (docs || []).forEach((object: any) => {
-            let putReq = store.put(object);
-            putReq.onsuccess = () => {
-                let getReq = store.get(putReq.result);
+        (docs || []).forEach((doc: any) => {
+            if (options.merge && doc[primaryKey]) {
+                let getReq = store.get(doc[primaryKey]);
                 getReq.onsuccess = () => {
-                    results.push(getReq.result);
+                    if (getReq.result) {
+                        let newDoc = { ...getReq.result, ...doc };
+                        let putReq = store.put(newDoc);
+                        putReq.onsuccess = onSuccess;
+                    }
                 }
+            } else {
+                let putReq = store.put(doc);
+                putReq.onsuccess = onSuccess;
             }
         });
-        transaction.commit();
     });
 }
 

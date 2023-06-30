@@ -9,7 +9,7 @@ import {
     upsert,
     clearStore,
 } from "./idb";
-import type { StoreConstructor, WhereConstraint } from "./types";
+import type { StoreConstructor, UpdateOptionsType, WhereConstraint } from "./types";
 
 /**
  * IndexedDB Object Store.
@@ -108,8 +108,8 @@ export class Store {
      * @param data Updateable documents
      * @returns <T> Return upddated object
      */
-    update<T>(data: T | T[]): Promise<T[]> {
-        return update<T>({ db: this.db, storeName: this.name, data });
+    update<T>(data: T | T[], options: UpdateOptionsType = {}): Promise<T[]> {
+        return update<T>({ db: this.db, storeName: this.name, data, options });
     }
 
     /**
@@ -117,7 +117,7 @@ export class Store {
      * @param data Updateable documents
      * @returns <T>[] Return updated objects
      */
-    upsert<T>(data: T | T[]): Promise<T[]> {
+    upsert<T>(data: T | T[], options: UpdateOptionsType = {}): Promise<T[]> {
         return upsert<T>({ db: this.db, storeName: this.name, data });
     }
 
@@ -128,7 +128,7 @@ export class Store {
      * @returns <string> Return provided indexKeyValues when success delete 
      */
     remove<T>(data: IDBValidKey | IDBValidKey[] | { data?: IDBValidKey | IDBValidKey[], where?: WhereConstraint | WhereConstraint[] }): Promise<(T | null)[]> {
-        return remove<T>({ db: this.db, storeName: this.name, data  })
+        return remove<T>({ db: this.db, storeName: this.name, data })
     }
 
     /**

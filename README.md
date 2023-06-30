@@ -66,6 +66,8 @@ await todos.find({ where: IdbWhere('_id', '>=', 1), skip, limit, desc, unique,  
 
 await todos.update({ _id: 1, task: 'Task First' });
 
+await todos.update({ _id: 1,   date : new Date()}, { merge: true });
+
 await todos.update([{ _id: 1, task: 'Task First' }, { _id: 2, task: 'Task Second' }]);
 
 await todos.upsert({ _id: 1, task: 'Task First' });
