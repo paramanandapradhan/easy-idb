@@ -276,7 +276,6 @@ export function insert<T>({ db, storeName, data }: {
                 throw new Error(`Primary key '${primaryKey}' not present insert data! `);
             }
         });
-        transaction.commit();
     })
 
 }

@@ -31,7 +31,7 @@
 		task = (task || '').trim();
 		if (task) {
 			if (!todo) {
-				console.log(await todos.upsert({ task }));
+				console.log(await todos.insert({ task }));
 			} else {
 				todo.task = task;
 				console.log(await todos.update(todo, { merge: true }));
