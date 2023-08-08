@@ -7,7 +7,7 @@
 	let items: any[] = [];
 	let task = '';
 	let db: Database | null = null;
-	let version = 3;
+	let version = 8;
 	let stores: StoreDefinitionType[] = [
 		{ name: 'tags', primaryKey: '_id', autoIncrement: true },
 		{ name: 'todos', primaryKey: '_id', autoIncrement: true },

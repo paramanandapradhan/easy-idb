@@ -253,6 +253,7 @@ export function insert<T>({ db, storeName, data }: {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([storeName], 'readwrite');
         let store = transaction.objectStore(storeName);
+        let primaryKey = store.keyPath as string;
         let results: T[] = [];
         transaction.oncomplete = () => {
             resolve(results);
@@ -262,13 +263,17 @@ export function insert<T>({ db, storeName, data }: {
         };
 
         let docs = Array.isArray(data) ? data : data ? [data] : null;
-        (docs || []).forEach((object: any) => {
-            let addReq = store.add(object);
-            addReq.onsuccess = () => {
-                let getReq = store.get(addReq.result);
-                getReq.onsuccess = () => {
-                    results.push(getReq.result);
+        (docs || []).forEach((doc: any) => {
+            if (doc[primaryKey] || store.autoIncrement) {
+                let addReq = store.add(doc);
+                addReq.onsuccess = () => {
+                    let getReq = store.get(addReq.result);
+                    getReq.onsuccess = () => {
+                        results.push(getReq.result);
+                    }
                 }
+            } else {
+                throw new Error(`Primary key '${primaryKey}' not present insert data! `);
             }
         });
         transaction.commit();
@@ -313,8 +318,13 @@ export function update<T>({ db, storeName, data, options = {} }: {
                     }
                 }
             } else {
-                let putReq = store.put(doc);
-                putReq.onsuccess = onSuccess;
+                if (doc[primaryKey]) {
+                    let putReq = store.put(doc);
+                    putReq.onsuccess = onSuccess;
+                } else {
+                    throw new Error(`Primary key '${primaryKey}' not present update data! `);
+                }
+
             }
         });
     });
@@ -328,7 +338,7 @@ export function upsert<T>({ db, storeName, data }: {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
-
+        const primaryKey = store.keyPath as string;
         let results: T[] = [];
 
         let isTransactionAborted = false;
@@ -354,19 +364,23 @@ export function upsert<T>({ db, storeName, data }: {
 
         let docs = Array.isArray(data) ? data : data ? [data] : null;
         (docs || []).forEach((doc: any) => {
-            const primaryKey = (doc)[(store as any).keyPath];
-            if (primaryKey) {
-                const getReq = store.get(primaryKey);
-                getReq.onsuccess = () => {
-                    const request = getReq.result ? store.put(doc) : store.add(doc);
+            const primaryKeyValue = doc[primaryKey];
+            if (primaryKeyValue || store.autoIncrement) {
+                if (primaryKeyValue) {
+                    const getReq = store.get(primaryKeyValue);
+                    getReq.onsuccess = () => {
+                        const request = getReq.result ? store.put(doc) : store.add(doc);
+                        request.onsuccess = onSuccess;
+                        request.onerror = onError(getReq.result ? 'put' : 'add');
+                    };
+                    getReq.onerror = onError('get');
+                } else if (store.autoIncrement) {
+                    const request = store.add(doc);
                     request.onsuccess = onSuccess;
-                    request.onerror = onError(getReq.result ? 'put' : 'add');
-                };
-                getReq.onerror = onError('get');
+                    request.onerror = onError('add');
+                }
             } else {
-                const addReq = store.add(doc);
-                addReq.onsuccess = onSuccess;
-                addReq.onerror = onError('add');
+                throw new Error(`Primary key '${primaryKey}' not present upsert data! `)
             }
         });
     });
@@ -375,7 +389,7 @@ export function upsert<T>({ db, storeName, data }: {
 export function remove<T>({ db, storeName, data }: {
     db: IDBDatabase,
     storeName: string,
-    data: IDBValidKey | IDBValidKey[] | { data?: IDBValidKey | IDBValidKey[], where?: WhereConstraint | WhereConstraint[] }
+    data: T | IDBValidKey | IDBValidKey[] | { data?: IDBValidKey | IDBValidKey[], where?: WhereConstraint | WhereConstraint[] }
 }): Promise<(T | null)[]> {
     return new Promise((resolve, reject) => {
         let _where = null;
@@ -388,7 +402,7 @@ export function remove<T>({ db, storeName, data }: {
         }
         const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
-        let primaryKey = store.keyPath;
+        let primaryKey = store.keyPath as string;
         if (Array.isArray(primaryKey)) {
             primaryKey = primaryKey.join('-');
         }
@@ -410,20 +424,21 @@ export function remove<T>({ db, storeName, data }: {
         }
 
         let docs = Array.isArray(_data) ? _data : _data ? [_data] : null;
-        if (docs) {
-            (docs || []).forEach((value) => {
-                const getReq = store.get(value!);
-                getReq.onsuccess = () => {
-                    const result: T = getReq.result;
-                    if (result) {
-                        const delReq = store.delete(value!);
-                        delReq.onsuccess = () => {
-                            results.push(result);
-                        };
-                    }
-                };
-            })
-        }
+
+        (docs || []).forEach((value) => {
+            let primaryKeyValue = value[primaryKey] || value;
+            const getReq = store.get(primaryKeyValue!);
+            getReq.onsuccess = () => {
+                const result: T = getReq.result;
+                if (result) {
+                    const delReq = store.delete(primaryKeyValue!);
+                    delReq.onsuccess = () => {
+                        results.push(result);
+                    };
+                }
+            };
+        })
+
 
         transaction.oncomplete = () => {
             resolve(results);
