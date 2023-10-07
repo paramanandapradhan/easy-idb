@@ -7,8 +7,13 @@ import type {
 } from "./types";
 
 function where(field: IDBValidKey, ops: WhereOps, value: IDBValidKey): WhereConstraint {
+    if (field && Array.isArray(field) && field.length == 1 && value && Array.isArray(value) && value.length == 1) {
+        field = field[0];
+        value = value[0];
+    }
     return { field, ops, value };
 }
+
 export { where, where as IdbWhere };
 
 /**
